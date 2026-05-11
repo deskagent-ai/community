@@ -172,15 +172,35 @@ cd deskagent
 ./setup-unix.sh
 ./start.sh
 
-# Windows
+# Windows (cmd.exe)
 setup-python.bat
 start.bat
+
+# Windows (PowerShell) — note the leading .\
+.\setup-python.bat
+.\start.bat
 ```
 
 WebUI opens at http://localhost:8765/.
 
 Configure backends and API keys in `config/system.json` and
 `config/backends.json` (templates are provided on first run).
+
+### Windows: cmd.exe vs PowerShell
+
+Both shells work, but they handle local scripts differently:
+
+| | cmd.exe | PowerShell |
+|--|---------|-------------|
+| Run script in current folder | `start.bat` | `.\start.bat` |
+| Why | cmd.exe auto-searches CWD | PowerShell does NOT search CWD by default (security feature) |
+| Symptom if you forget `.\` | works | `start.bat : The term 'start.bat' is not recognized...` |
+| Pass arguments | `start.bat --port 9000` | `.\start.bat --port 9000` |
+| Execution policy issues | n/a | `.ps1` files may need `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` once |
+
+**Recommendation for Windows users:** if you're not sure, use **cmd.exe**. The setup scripts and `start.bat` were designed and tested for cmd.exe first. PowerShell works fine too, just remember the `.\` prefix.
+
+If you launch via the Start menu or a desktop shortcut, this doesn't matter — those use the full path.
 
 ## Platform support
 
