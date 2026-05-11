@@ -952,22 +952,56 @@
                 <div id="configuredBackends"></div>
             </div>
 
-            <div class="info-box recommended">
-                <h3>&#x1F511; Naechster Schritt: Lizenzschluessel</h3>
+            <div class="info-box">
+                <h3>&#x1F4DD; Letzter Schritt: Edition waehlen</h3>
                 <p>
-                    Um DeskAgent nutzen zu koennen, trage deinen Lizenzschluessel ein.
-                </p>
-                <p class="mt-md">
-                    Noch keine Lizenz? <a href="{{BRANDING_ORDER_URL}}" target="_blank">&#x2192; Jetzt bestellen</a>
+                    DeskAgent gibt es in zwei Varianten &mdash; beide nutzen den
+                    gleichen Code:
                 </p>
             </div>
 
-            <button type="button" class="btn" id="finishBtn">
-                Lizenz eintragen
-            </button>
+            <div class="edition-choice" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0;">
 
-            <p class="skip-hint mt-lg">
-                Die Einstellungen oeffnen sich automatisch im Tab <strong>Lizenz</strong>.
+                <div class="edition-card" style="border:2px solid #2e7d32;border-radius:8px;padding:1.25rem;background:#f1f8e9;">
+                    <h3 style="margin-top:0;">&#x1F310; Community Edition</h3>
+                    <p style="font-size:0.95rem;">
+                        <strong>Open Source unter AGPL-3.0.</strong> Kostenlos,
+                        selbst gehostet, voller Funktionsumfang. Kein Aktivierungs-
+                        schluessel noetig.
+                    </p>
+                    <ul style="font-size:0.9rem;padding-left:1.2rem;margin-top:0.75rem;">
+                        <li>Alle Features &amp; alle MCP-Server</li>
+                        <li>Source-Code auf GitHub</li>
+                        <li>Community-Support</li>
+                    </ul>
+                    <button type="button" class="btn" id="finishCommunityBtn" style="width:100%;background:#2e7d32;margin-top:0.5rem;">
+                        Community-Edition starten
+                    </button>
+                </div>
+
+                <div class="edition-card" style="border:2px solid #1565c0;border-radius:8px;padding:1.25rem;background:#e3f2fd;">
+                    <h3 style="margin-top:0;">&#x1F511; Commercial License</h3>
+                    <p style="font-size:0.95rem;">
+                        Signierter Installer, Auto-Updater, AGPL-freie Lizenz
+                        fuer kommerzielle Nutzung, Priority Support &amp; SLA.
+                    </p>
+                    <ul style="font-size:0.9rem;padding-left:1.2rem;margin-top:0.75rem;">
+                        <li>Aktivierungsschluessel erforderlich</li>
+                        <li>Kein AGPL-Source-Disclosure-Zwang</li>
+                        <li>SLA-basierter Support</li>
+                    </ul>
+                    <button type="button" class="btn" id="finishBtn" style="width:100%;background:#1565c0;margin-top:0.5rem;">
+                        Lizenz eintragen
+                    </button>
+                </div>
+
+            </div>
+
+            <p class="skip-hint mt-md" style="text-align:center;">
+                Noch keine Commercial License?
+                <a href="{{BRANDING_ORDER_URL}}" target="_blank">&#x2192; Anfrage stellen</a>
+                &middot;
+                <a href="https://github.com/deskagent-ai/community" target="_blank">&#x2192; Source auf GitHub</a>
             </p>
         </div>
     </div>
@@ -1303,11 +1337,19 @@
             showCompletionPage();
         }
 
-        // Page 5: Finish button - opens settings with License tab
+        // Page 5: Finish button (Commercial) - opens settings with License tab
         document.getElementById('finishBtn').addEventListener('click', () => {
             sessionStorage.setItem('setupWizardCompleted', 'true');
             // Navigate to main page with parameter to open settings
             window.location.href = '/?openSettings=license';
+        });
+
+        // Page 5: Community Edition - finishes wizard directly, no license tab
+        document.getElementById('finishCommunityBtn').addEventListener('click', () => {
+            sessionStorage.setItem('setupWizardCompleted', 'true');
+            sessionStorage.setItem('deskagentEdition', 'community');
+            // Go straight to main UI
+            window.location.href = '/';
         });
 
         // Make done steps clickable for navigation

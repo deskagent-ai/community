@@ -9,13 +9,50 @@ set /p PYTHON_VERSION=<"%~dp0python-version.txt"
 set PYTHON_DIR=%~dp0python
 echo Using Python %PYTHON_VERSION%
 
+:: --force or --reinstall: wipe existing python/ before installing
+set FORCE_REINSTALL=0
+if /i "%~1"=="--force" set FORCE_REINSTALL=1
+if /i "%~1"=="--reinstall" set FORCE_REINSTALL=1
+
 if exist "%PYTHON_DIR%\python.exe" (
-    echo Python bereits vorhanden: %PYTHON_DIR%
-    echo Zum Neuinstallieren erst deskagent\python\ loeschen.
+    if "%FORCE_REINSTALL%"=="1" (
+        echo Force reinstall - removing existing python/ directory...
+        rmdir /s /q "%PYTHON_DIR%"
+        goto :do_install
+    )
+
+    :: Verify existing install matches expected version
+    for /f "tokens=2" %%v in ('"%PYTHON_DIR%\python.exe" --version 2^>^&1') do set CURRENT_VER=%%v
+    if not "%CURRENT_VER%"=="%PYTHON_VERSION%" (
+        echo [ERROR] Python version mismatch in %PYTHON_DIR%
+        echo         Expected: %PYTHON_VERSION%
+        echo         Found:    %CURRENT_VER%
+        echo.
+        echo Run "setup-python.bat --force" to wipe and reinstall,
+        echo or manually delete %PYTHON_DIR% first.
+        pause
+        exit /b 1
+    )
+
+    :: Verify sqlite3 works (the canonical "is this install healthy" check)
+    "%PYTHON_DIR%\python.exe" -c "import sqlite3" >nul 2>&1
+    if errorlevel 1 (
+        echo [ERROR] Python install is corrupt - sqlite3 import failed.
+        echo         This usually means _sqlite3.pyd / sqlite3.dll were
+        echo         replaced with files from a different Python version.
+        echo.
+        echo Run "setup-python.bat --force" to wipe and reinstall.
+        pause
+        exit /b 1
+    )
+
+    echo Python bereits vorhanden und gesund: %PYTHON_DIR% (%CURRENT_VER%)
+    echo Zum Neuinstallieren: setup-python.bat --force
     pause
     exit /b 0
 )
 
+:do_install
 echo.
 echo [1/5] Downloading Python %PYTHON_VERSION% embeddable...
 mkdir "%PYTHON_DIR%" 2>nul
@@ -138,14 +175,44 @@ if not exist "%PYTHON_DIR%\Lib\sqlite3\__init__.py" (
 )
 
 :: Copy _sqlite3.pyd (C extension) - needed for sqlite3 to work
-:: Try to find it next to the python.exe of system Python
-for /f "delims=" %%p in ('py -3 -c "import sys; print(sys.prefix)" 2^>nul') do (
+:: CRITICAL: only copy from a Python with MATCHING major.minor version!
+:: A 3.13 _sqlite3.pyd in a 3.12 embedded bundle is the #1 cause of
+:: "ImportError: DLL load failed while importing _sqlite3" reports.
+::
+:: PYTHON_VERSION is e.g. "3.12.8" - extract the "3.12" major.minor part.
+for /f "tokens=1,2 delims=." %%a in ("%PYTHON_VERSION%") do (
+    set TARGET_MAJ=%%a
+    set TARGET_MIN=%%b
+)
+set TARGET_MAJMIN=%TARGET_MAJ%.%TARGET_MIN%
+
+:: Use the py launcher with explicit version selector first (most reliable)
+:: e.g. "py -3.12 ..." picks ONLY a 3.12 install, never 3.13.
+for /f "delims=" %%p in ('py -%TARGET_MAJMIN% -c "import sys; print(sys.prefix)" 2^>nul') do (
     if exist "%%p\DLLs\_sqlite3.pyd" (
         copy /Y "%%p\DLLs\_sqlite3.pyd" "%PYTHON_DIR%\" >nul 2>&1
-        echo       _sqlite3.pyd copied from: %%p\DLLs
-    )
-    if exist "%%p\DLLs\sqlite3.dll" (
         copy /Y "%%p\DLLs\sqlite3.dll" "%PYTHON_DIR%\" >nul 2>&1
+        echo       sqlite3 DLLs copied from: %%p\DLLs (py -%TARGET_MAJMIN%)
+    )
+)
+
+:: Fallback: untargeted py -3 only if version-locked lookup didn't find anything.
+:: This is the OLD behavior and CAN cause version mismatches - verify before using.
+if not exist "%PYTHON_DIR%\_sqlite3.pyd" (
+    for /f "delims=" %%p in ('py -3 -c "import sys; print(sys.prefix)" 2^>nul') do (
+        if exist "%%p\DLLs\_sqlite3.pyd" (
+            :: Check that the source Python's version matches our target
+            for /f "tokens=2" %%v in ('"%%p\python.exe" --version 2^>^&1') do set SRC_VER=%%v
+            for /f "tokens=1,2 delims=." %%a in ("!SRC_VER!") do (
+                if "%%a.%%b"=="%TARGET_MAJMIN%" (
+                    copy /Y "%%p\DLLs\_sqlite3.pyd" "%PYTHON_DIR%\" >nul 2>&1
+                    copy /Y "%%p\DLLs\sqlite3.dll" "%PYTHON_DIR%\" >nul 2>&1
+                    echo       sqlite3 DLLs copied from: %%p\DLLs (verified %TARGET_MAJMIN%)
+                ) else (
+                    echo       SKIPPED %%p\DLLs - version mismatch ^(found !SRC_VER!, need %TARGET_MAJMIN%.x^)
+                )
+            )
+        )
     )
 )
 
@@ -169,16 +236,24 @@ if not exist "%PYTHON_DIR%\_sqlite3.pyd" (
     )
 )
 
-:: Verify sqlite3
-if exist "%PYTHON_DIR%\Lib\sqlite3\__init__.py" (
-    if exist "%PYTHON_DIR%\_sqlite3.pyd" (
-        echo       sqlite3: OK
-    ) else (
-        echo       [WARNING] sqlite3 module found but _sqlite3.pyd missing - datastore MCP may not work
-    )
-) else (
-    echo       [WARNING] sqlite3 module not found - datastore MCP may not work
+:: Verify sqlite3 - runtime test, not just file-existence
+echo       [Verify] Testing sqlite3 import...
+"%PYTHON_DIR%\python.exe" -c "import sqlite3; sqlite3.connect(':memory:').close()" >nul 2>&1
+if errorlevel 1 (
+    echo       [ERROR] sqlite3 import FAILED at runtime.
+    echo               Most common cause: _sqlite3.pyd and sqlite3.dll were
+    echo               copied from a different Python version (e.g. 3.13 files
+    echo               in a 3.12 install).
+    echo.
+    echo               Check the [Stdlib] step above for any "version mismatch"
+    echo               warnings. To fix, either install Python %TARGET_MAJMIN%
+    echo               on the system, or delete deskagent\python\ and re-run
+    echo               setup-python.bat.
+    echo.
+    pause
+    exit /b 1
 )
+echo       sqlite3: OK
 
 echo.
 echo [6/6] Installing spaCy models (optional, ~600 MB)...

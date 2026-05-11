@@ -9,6 +9,8 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
 [![GitHub Discussions](https://img.shields.io/badge/discuss-on%20github-orange.svg)](https://github.com/deskagent-ai/community/discussions)
 
+![DeskAgent WebUI](docs/screenshots/webui-overview.png)
+
 ## What is DeskAgent?
 
 DeskAgent automates repetitive desk work with plain-text instructions or
