@@ -201,11 +201,13 @@ DeskAgent is a **Python 3.12** application. Nothing fancy — pinned versions, w
 |--|--|
 | **Outlook Desktop** | [`pywin32`](https://pypi.org/project/pywin32/) (Windows COM) |
 | **Microsoft 365 / Graph** | [`msal`](https://pypi.org/project/msal/) + Microsoft Graph REST |
-| **Gmail / Google Calendar** | [`google-api-python-client`](https://pypi.org/project/google-api-python-client/) |
-| **PDF** | [`pypdf`](https://pypi.org/project/pypdf/), [`pypdfium2`](https://pypi.org/project/pypdfium2/) |
+| **Gmail / Google Calendar** | [`google-api-python-client`](https://pypi.org/project/google-api-python-client/), [`google-auth-oauthlib`](https://pypi.org/project/google-auth-oauthlib/) |
+| **PDF** | [`pypdf`](https://pypi.org/project/pypdf/) (read/write), [`pypdfium2`](https://pypi.org/project/pypdfium2/) (render pages to images) |
 | **Excel** | [`openpyxl`](https://pypi.org/project/openpyxl/) |
-| **Browser automation** | Chrome DevTools Protocol (no Selenium) |
-| **Stream Deck plugin** | Vanilla JS/HTML via the Elgato SDK |
+| **Browser automation** | [`playwright`](https://pypi.org/project/playwright/) over Chrome DevTools Protocol (Chromium-based browsers only) |
+| **HTTP** | [`requests`](https://pypi.org/project/requests/) (sync), [`aiohttp`](https://pypi.org/project/aiohttp/) (async) |
+| **Process / system** | [`psutil`](https://pypi.org/project/psutil/) |
+| **Stream Deck plugin** | Vanilla JS/HTML via the Elgato Stream Deck SDK |
 
 ### Storage & state
 

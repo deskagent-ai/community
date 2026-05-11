@@ -11,25 +11,56 @@ contact info@realvirtual.io.
 ------------------------------------------------------------------------
 
 DeskAgent depends on a number of third-party libraries. The following
-list highlights the major direct dependencies and their licenses. A
-complete, up-to-date list of all transitive dependencies and their
-license texts can be generated using the helper script
-`scripts/collect_licenses.py` and is shipped with binary distributions.
+list highlights the major direct dependencies and their licenses,
+verified against the installed package metadata. A complete, up-to-date
+list of all transitive dependencies and their license texts can be
+generated using the helper script `scripts/collect_licenses.py` and
+is shipped with binary distributions.
 
-  Anthropic Python SDK (anthropic)            MIT
-  Google GenAI SDK (google-genai)             Apache 2.0
-  OpenAI Python (openai)                      Apache 2.0
-  Model Context Protocol SDK (mcp)            MIT
-  FastAPI                                     MIT
-  Uvicorn                                     BSD-3-Clause
-  Pydantic                                    MIT
+LLM SDKs and MCP
+  anthropic                                   MIT
+  google-genai                                Apache-2.0
+  openai                                      Apache-2.0
+  qwen-agent                                  Apache-2.0 (per upstream README)
+  mcp                                         MIT
+
+Server framework
+  fastapi                                     MIT
+  uvicorn                                     BSD-3-Clause
+  sse-starlette                               BSD-3-Clause
+  python-multipart                            Apache-2.0
+  pydantic                                    MIT
+  watchdog                                    Apache-2.0
+  aiohttp                                     Apache-2.0 AND MIT
+  requests                                    Apache-2.0
+
+UI / system
+  pystray                                     LGPL-3.0
+  Pillow                                      MIT-CMU (HPND-style)
+  pywebview                                   BSD-3-Clause
+
+Office / file formats
   pypdf                                       BSD-3-Clause
+  pypdfium2                                   BSD-3-Clause, Apache-2.0 (plus PDFium deps)
   openpyxl                                    MIT
-  pywin32                                     PSF
-  pystray                                     LGPLv3
-  Pillow                                      HPND
-  requests                                    Apache 2.0
+
+Audio
+  sounddevice                                 MIT
+  soundfile                                   BSD-3-Clause
+  numpy                                       BSD-3-Clause (plus 0BSD, MIT, Zlib, CC0)
+
+Browser / automation
+  playwright                                  Apache-2.0
+
+Microsoft / Google / system
+  pywin32                                     PSF (Python Software Foundation License)
+  msal                                        MIT
+  google-api-python-client                    Apache-2.0
+  google-auth                                 Apache-2.0
+  google-auth-oauthlib                        Apache-2.0
   keyboard                                    MIT
+  psutil                                      BSD-3-Clause
+  pyperclip                                   BSD-3-Clause
 
 Optional extras (installed via `pip install deskagent[<extra>]`):
 
@@ -37,6 +68,12 @@ Optional extras (installed via `pip install deskagent[<extra>]`):
     presidio-analyzer                         MIT
     presidio-anonymizer                       MIT
     spaCy                                     MIT
+    (loads language models de_core_news_lg, en_core_web_lg - MIT)
+
+  [claude-sdk]
+    claude-agent-sdk (Python wrapper)         MIT
+    bundled claude CLI binary                 PROPRIETARY (Anthropic Commercial Terms)
+    -> not installed by default for this reason
 
   [claude-sdk]
     claude-agent-sdk                          MIT
