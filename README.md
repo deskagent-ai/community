@@ -162,6 +162,85 @@ Contributions are very welcome. See
 for the template and conventions, then open a pull request or a
 GitHub Discussion.
 
+## Technology stack
+
+DeskAgent is a **Python 3.12** application. Nothing fancy — pinned versions, well-known libraries, no exotic build system.
+
+### Server
+
+| | |
+|--|--|
+| **HTTP server** | [FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/) |
+| **Streaming** | Server-Sent Events (SSE) for live agent output |
+| **Validation** | [Pydantic](https://docs.pydantic.dev/) v2 |
+| **Tray icon** | [pystray](https://pypi.org/project/pystray/) + Pillow |
+| **Optional desktop window** | [pywebview](https://pywebview.flowrl.com/) |
+
+### MCP
+
+| | |
+|--|--|
+| **Core** | [`mcp`](https://pypi.org/project/mcp/) (the official Model Context Protocol SDK) |
+| **Transports** | in-process (default for built-in servers), stdio, HTTP |
+| **Hub mode** | DeskAgent acts as an MCP server itself so Claude Desktop and Claude Code can talk to it |
+
+### LLM backends
+
+| Backend | SDK |
+|---------|-----|
+| Claude (Anthropic API) | [`anthropic`](https://pypi.org/project/anthropic/) |
+| Claude Agent SDK | [`claude-agent-sdk`](https://pypi.org/project/claude-agent-sdk/) (optional extra; ships a proprietary `claude.exe` binary so it's not in the default install) |
+| Gemini | [`google-genai`](https://pypi.org/project/google-genai/) |
+| OpenAI / OpenAI-compatible | [`openai`](https://pypi.org/project/openai/) |
+| Mistral | OpenAI-compatible client |
+| Local Qwen / Ollama | [`qwen-agent`](https://pypi.org/project/qwen-agent/) and direct HTTP |
+
+### Integrations (selection)
+
+| | |
+|--|--|
+| **Outlook Desktop** | [`pywin32`](https://pypi.org/project/pywin32/) (Windows COM) |
+| **Microsoft 365 / Graph** | [`msal`](https://pypi.org/project/msal/) + Microsoft Graph REST |
+| **Gmail / Google Calendar** | [`google-api-python-client`](https://pypi.org/project/google-api-python-client/) |
+| **PDF** | [`pypdf`](https://pypi.org/project/pypdf/), [`pypdfium2`](https://pypi.org/project/pypdfium2/) |
+| **Excel** | [`openpyxl`](https://pypi.org/project/openpyxl/) |
+| **Browser automation** | Chrome DevTools Protocol (no Selenium) |
+| **Stream Deck plugin** | Vanilla JS/HTML via the Elgato SDK |
+
+### Storage & state
+
+| | |
+|--|--|
+| **Local datastore** | SQLite via Python's stdlib `sqlite3` |
+| **Knowledge base** | Plain Markdown files loaded into agent context on demand |
+| **Sessions** | Append-only SQLite log |
+| **Config** | Versioned JSON with a 3-tier override system (system → user → plugin) |
+
+### Optional extras
+
+Install with `pip install deskagent[<extra>]`:
+
+| Extra | Adds |
+|-------|------|
+| `[anonymizer]` | [Microsoft Presidio](https://microsoft.github.io/presidio/) + [spaCy](https://spacy.io/) for PII redaction (~500 MB with German + English models) |
+| `[claude-sdk]` | The `claude-agent-sdk` package + the bundled Claude Code CLI (~230 MB, proprietary binary) |
+
+### Voice & audio (optional)
+
+| | |
+|--|--|
+| **Speech-to-text** | [openai-whisper](https://github.com/openai/whisper) (local, runs on CPU/CUDA) |
+| **Hotkey** | Global hotkey via [`keyboard`](https://pypi.org/project/keyboard/) (Windows) |
+
+### What we deliberately do NOT use
+
+- **No JavaScript framework** in the WebUI. Vanilla HTML + CSS + JS, hand-rolled. Loads instantly, no build step.
+- **No ORM**. SQL queries are short and explicit.
+- **No Docker required**. DeskAgent runs as a normal Python process on your machine. You can containerize it yourself, but the project doesn't push you into a specific deployment pattern.
+- **No telemetry**. The application doesn't phone home.
+
+Full dependency list with versions: [`requirements.txt`](requirements.txt). License-compatibility notes (AGPL-friendly?): [`NOTICE`](NOTICE).
+
 ## Quick start
 
 ```bash
