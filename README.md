@@ -93,13 +93,72 @@ for the Claude Desktop / Claude Code hook-up.
 ## Highlights
 
 - **Multi-backend LLM** — Claude (API + Agent SDK), Gemini, OpenAI, Mistral, local Qwen/Ollama. Pick a different backend per agent.
-- **22+ MCP servers** included — Outlook, Gmail, IMAP, Microsoft Graph, Billomat, Lexware, ecoDMS, Paperless-ngx, SEPA, PDF, Excel, Browser, Filesystem, Datastore, Charts, Telegram, UserEcho, Instagram, LinkedIn, Clipboard. Bring your own via the plugin API.
+- **23 MCP servers** included (see full list below). Bring your own via the plugin API.
 - **Hot-reloadable** Markdown agents and skills.
 - **Local knowledge base** loaded into agents on demand.
 - **Scheduler and email watchers** for unattended workflows.
 - **Optional PII anonymization** via Microsoft Presidio (`pip install deskagent[anonymizer]`) — sensitive data is redacted before it reaches the LLM and re-inserted in the response.
 - **Plugin system** with a documented API and a Plugin Exception in the license so proprietary plugins are explicitly allowed.
 - **Streamdeck integration** out of the box.
+
+## All built-in MCP servers
+
+DeskAgent ships with the following MCP servers. The exact set of tools
+per server is documented in [knowledge/doc-mcp-tools.md](knowledge/doc-mcp-tools.md).
+
+### Email, calendar, communication
+
+| Server | What it does | Status |
+|--------|--------------|--------|
+| `outlook` | Outlook Desktop via COM — read, reply, flag, move, drafts, calendar | stable |
+| `msgraph` | Microsoft Graph — Outlook/Calendar/Teams via OAuth | stable |
+| `gmail` | Gmail + Google Calendar via OAuth | stable |
+| `imap` | Generic IMAP + SMTP with custom flags | stable |
+| `telegram` | Telegram Bot API (send/receive messages, files, keyboards) | **beta** |
+
+### Invoicing, accounting, payments
+
+| Server | What it does | Status |
+|--------|--------------|--------|
+| `billomat` | Billomat API — customers, offers, invoices, articles | stable |
+| `lexware` | Lexware Office API — contacts, invoices, quotations | **beta** |
+| `sevdesk` | sevDesk API — contacts, invoices, vouchers | **beta** |
+| `sepa` | SEPA pain.001 credit-transfer XML generation + CAMT.052 parsing | stable |
+
+### Documents & files
+
+| Server | What it does | Status |
+|--------|--------------|--------|
+| `ecodms` | ecoDMS document archive (upload, classify, search) | stable |
+| `paperless` | Paperless-ngx (OCR, tagging, full-text search) | stable |
+| `pdf` | Read, split, merge, render PDFs | stable |
+| `excel` | Read/write `.xlsx` files | stable |
+| `filesystem` | Read/write/list files, batch PDF read | stable |
+
+### Productivity, automation, data
+
+| Server | What it does | Status |
+|--------|--------------|--------|
+| `browser` | Browser automation via Chrome DevTools Protocol | stable |
+| `clipboard` | System clipboard read/write/append/paste | stable |
+| `chart` | Render charts from data | stable |
+| `datastore` | Local SQLite key-value + document store | stable |
+| `desk` | DeskAgent self-control (run agents, manage tools, status) | stable |
+| `project` | Claude Code CLI integration | stable |
+
+### Social media & support
+
+| Server | What it does | Status |
+|--------|--------------|--------|
+| `userecho` | UserEcho support tickets | stable |
+| `linkedin` | LinkedIn API (posts, profile, company pages) | stable |
+| `instagram` | Instagram Graph API (posts, stories, insights) | stable |
+
+**Missing a server? An MCP function that should be there but isn't?**
+Contributions are very welcome. See
+[knowledge/doc-creating-mcp-servers.md](knowledge/doc-creating-mcp-servers.md)
+for the template and conventions, then open a pull request or a
+GitHub Discussion.
 
 ## Quick start
 
