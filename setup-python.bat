@@ -16,8 +16,31 @@ if /i "%~1"=="--reinstall" set FORCE_REINSTALL=1
 
 if exist "%PYTHON_DIR%\python.exe" (
     if "%FORCE_REINSTALL%"=="1" (
+        echo Force reinstall - stopping any running DeskAgent processes...
+        :: Kill python/pythonw processes that are using our embedded Python.
+        :: We only kill those whose path starts with our PYTHON_DIR to avoid
+        :: nuking unrelated Python apps on the user's machine.
+        for /f "tokens=2 delims=," %%i in ('wmic process where "executablepath like '%PYTHON_DIR:\=\\%\\%%'" get processid /format:csv 2^>nul ^| findstr /r "[0-9]"') do (
+            echo   killing PID %%i
+            taskkill /F /PID %%i >nul 2>&1
+        )
+        :: Give Windows a moment to release file locks
+        timeout /t 2 /nobreak >nul
+
         echo Force reinstall - removing existing python/ directory...
-        rmdir /s /q "%PYTHON_DIR%"
+        :: Atomic-ish replace: rename first, then delete the renamed dir.
+        :: This catches "directory locked" failures clearly before we start
+        :: extracting fresh files on top of half-deleted ones.
+        if exist "%PYTHON_DIR%.old" rmdir /s /q "%PYTHON_DIR%.old" >nul 2>&1
+        ren "%PYTHON_DIR%" "python.old"
+        if errorlevel 1 (
+            echo [ERROR] Cannot rename %PYTHON_DIR% - files are still locked.
+            echo         Close DeskAgent completely (check Task Manager for
+            echo         python.exe / pythonw.exe processes) and try again.
+            pause
+            exit /b 1
+        )
+        rmdir /s /q "%PYTHON_DIR%.old" >nul 2>&1
         goto :do_install
     )
 
