@@ -18,6 +18,7 @@ import tempfile
 import urllib.request
 import urllib.error
 import urllib.parse
+from datetime import datetime
 from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
@@ -115,6 +116,12 @@ READ_ONLY_TOOLS = {
     "billomat_search_invoices",
     "billomat_search_invoices_by_article",
     "billomat_get_open_invoices",
+    # Templates
+    "billomat_list_templates",
+    "billomat_discover_text_templates",
+    # Free Texts (Sprach-Bausteine)
+    "billomat_list_free_texts",
+    "billomat_get_free_text",
 }
 
 # Destructive tools that modify, create, or delete data
@@ -132,18 +139,32 @@ DESTRUCTIVE_TOOLS = {
     # Confirmations
     "billomat_create_confirmation",
     "billomat_create_confirmation_from_offer",
+    "billomat_update_confirmation",
     "billomat_add_confirmation_item",
     "billomat_finalize_confirmation",
     "billomat_create_complete_confirmation_from_offer",
     "billomat_download_confirmation_pdf",
     # Invoices
     "billomat_create_invoice",
+    "billomat_create_invoice_from_offer",
+    "billomat_create_invoice_from_confirmation",
+    "billomat_create_complete_invoice_from_offer",
+    "billomat_create_complete_invoice_from_confirmation",
+    "billomat_update_invoice",
+    "billomat_finalize_invoice",
+    "billomat_apply_free_text_to_invoice",
+    "billomat_apply_free_text_to_confirmation",
+    "billomat_apply_free_text_to_offer",
     "billomat_add_invoice_item",
     "billomat_add_timelog_to_invoice",
     "billomat_add_article_to_invoice",
     "billomat_update_invoice_item",
     "billomat_delete_invoice_item",
     "billomat_add_invoice_items_batch",
+    # Cleanup / Delete (nur DRAFT)
+    "billomat_delete_invoice",
+    "billomat_delete_offer",
+    "billomat_delete_confirmation",
     # Payments
     "billomat_mark_invoice_paid",
     # PDF Downloads (create files)
@@ -411,7 +432,15 @@ def api_request(endpoint: str, method: str = "GET", data: dict = None) -> dict:
 
     try:
         with urllib.request.urlopen(req, timeout=30) as response:
-            return json.loads(response.read().decode("utf-8"))
+            # Leere Antwort (z.B. HTTP 204 bei DELETE) als {} behandeln,
+            # sonst wirft json.loads "Expecting value: line 1 column 1".
+            raw = response.read()
+            if not raw:
+                return {}
+            text = raw.decode("utf-8").strip()
+            if not text:
+                return {}
+            return json.loads(text)
     except urllib.error.HTTPError as e:
         error_body = e.read().decode("utf-8") if e.fp else str(e)
         return {"error": f"HTTP {e.code}: {error_body[:200]}"}
@@ -476,6 +505,7 @@ E-Mail: {c.get('email', '-')}
 Telefon: {c.get('phone', '-')}
 Adresse: {c.get('street', '-')}, {c.get('zip', '-')} {c.get('city', '-')}
 Land: {c.get('country_code', '-')}
+Sprache: {c.get('content_language', '-')}
 USt-IdNr: {c.get('vat_number', '-')}
 Web: {{{{LINK:{link_ref}}}}}"""
 
@@ -492,7 +522,8 @@ def billomat_create_customer(
     city: str = "",
     country_code: str = "DE",
     phone: str = "",
-    vat_number: str = ""
+    vat_number: str = "",
+    language_code: str = ""
 ) -> str:
     """Erstellt einen neuen Kunden in Billomat.
 
@@ -508,6 +539,12 @@ def billomat_create_customer(
         country_code: Ländercode (DE, AT, CH, US, GB, etc.)
         phone: Telefonnummer
         vat_number: USt-IdNr / VAT ID (z.B. ATU12345678, FR12345678901)
+        language_code: Kundensprache "de"/"en" - steuert in Billomat
+                       welche Text-Vorlage und Locale beim Erstellen von
+                       Dokumenten (Rechnung/AB/Angebot) verwendet wird.
+                       Default: leer = Account-Default. Bei Auslandskunden
+                       (country_code != DE/AT/CH) wird "en" gesetzt wenn
+                       nicht explizit angegeben.
     """
     customer_data = {"name": name}
 
@@ -536,6 +573,16 @@ def billomat_create_customer(
     customer_data["locale"] = "de_DE" if country_code in ("DE", "AT") else "en_AG"
     customer_data["tax_rule"] = "TAX" if country_code == "DE" else "NO_TAX"
 
+    # Sprache: explizit > Auto aus country_code (DE/AT/CH -> de, sonst en).
+    # Billomat-Feld heisst 'content_language' (NICHT 'language_code'),
+    # auch wenn unser Param-Name aus User-Sicht language_code bleibt.
+    if language_code:
+        customer_data["content_language"] = language_code.lower()
+    elif country_code:
+        customer_data["content_language"] = (
+            "de" if country_code.upper() in ("DE", "AT", "CH") else "en"
+        )
+
     result = api_request("clients", "POST", {"client": customer_data})
 
     if "error" in result:
@@ -558,7 +605,8 @@ def billomat_update_customer(
     city: str = "",
     country_code: str = "",
     phone: str = "",
-    vat_number: str = ""
+    vat_number: str = "",
+    language_code: str = ""
 ) -> str:
     """Aktualisiert einen bestehenden Kunden in Billomat.
 
@@ -575,6 +623,9 @@ def billomat_update_customer(
         country_code: Neuer Ländercode (optional)
         phone: Neue Telefonnummer (optional)
         vat_number: USt-IdNr / VAT ID (optional)
+        language_code: Kundensprache "de"/"en" - steuert Text-Vorlage und
+                       Locale fuer kuenftige Dokumente. Nachtraegliches
+                       Setzen aendert NICHT bereits erstellte Dokumente.
     """
     customer_data = {}
 
@@ -600,6 +651,9 @@ def billomat_update_customer(
         customer_data["phone"] = phone
     if vat_number:
         customer_data["vat_number"] = vat_number
+    if language_code:
+        # Billomat-Feld heisst 'content_language' (NICHT 'language_code')
+        customer_data["content_language"] = language_code.lower()
 
     if not customer_data:
         return "Fehler: Keine Daten zum Aktualisieren angegeben"
@@ -1108,7 +1162,8 @@ def billomat_download_offer_pdf(offer_id: int, filename: str = "") -> str:
 - Größe: {size:,} Bytes
 
 Zum Anhängen an E-Mail:
-  create_new_email_with_attachment(to, subject, body, "{pdf_path}")"""
+  outlook_create_new_email_with_attachment(to, subject, body, "{pdf_path}")
+  graph_create_draft(to, subject, body, attachments="{pdf_path}", mailbox="<optional>")"""
 
 
 @mcp.tool()
@@ -1210,18 +1265,36 @@ def billomat_create_confirmation(
 
 
 @mcp.tool()
-def billomat_create_confirmation_from_offer(offer_id: int) -> str:
+def billomat_create_confirmation_from_offer(
+    offer_id: int,
+    intro: str = "",
+    note: str = "",
+    label: str = "",
+    template: str = "",
+) -> str:
     """Erstellt eine Auftragsbestaetigung aus einem bestehenden Angebot.
 
     Hauptworkflow: Kunde hat Angebot akzeptiert -> aus diesem Angebot
-    wird eine Auftragsbestaetigung erzeugt. Kunde, Adresse, Positionen
-    und Konditionen werden aus dem Angebot uebernommen.
+    wird eine AB erzeugt. Kunde, Adresse, Positionen, Konditionen,
+    Steuern werden aus dem Angebot uebernommen.
 
-    Wenn der dedizierte Billomat-Endpoint nicht verfuegbar ist,
-    wird die Auftragsbestaetigung manuell aus den Angebotsdaten erstellt.
+    WICHTIG: Angebots-Intro ("...folgendes Angebot unterbreiten...") und
+    Angebots-Anmerkungen ("Gueltigkeit 3 Monate...") werden bewusst
+    NICHT aus dem Angebot uebernommen, da sie fuer eine AB unpassend sind.
+    Wird kein intro/note uebergeben, bleibt die AB an dieser Stelle leer
+    bzw. nutzt das Template-Default.
 
     Args:
         offer_id: Die Angebots-ID aus Billomat
+        intro: AB-Intro, z.B. "Vielen Dank fuer Ihre Bestellung Nr. 1268837
+               vom 11.05.2026, die wir hiermit gerne bestaetigen.
+               Liefertermin: 13.05.2026"
+        note: AB-Anmerkungen (Zahlungsbedingungen lt. PO etc.)
+        label: AB-Label/Betreff (default: bleibt leer oder Template-Default)
+        template: AB-Template-Name fuer DE/EN-Steuerung (z.B.
+                  "auftragsbestaetigung-de" / "auftragsbestaetigung-en").
+                  Verfuegbare Templates via billomat_list_templates().
+                  Wenn nicht gesetzt: Billomat-Default.
 
     Returns:
         Confirmation-Details (Status: DRAFT) - muss noch finalisiert werden
@@ -1244,18 +1317,40 @@ def billomat_create_confirmation_from_offer(offer_id: int) -> str:
 
     if not confirmation:
         # 3. Fallback: Manuell aus Angebotsdaten neu anlegen
+        # WICHTIG: 'intro' und 'note' NICHT aus Offer kopieren -
+        # sie sind dort Angebots-spezifisch und fuer eine AB falsch.
+        # 'template_id' NICHT aus Offer uebernehmen - Templates sind
+        # dokument-typ-spezifisch (Offer-Template != AB-Template).
+        # 'label' nur kopieren wenn nicht vom Caller vorgegeben.
         used_fallback = True
         client_id = offer.get("client_id")
         if not client_id:
             return "Fehler: Angebot hat keine Kunden-ID"
 
         payload: dict = {"client_id": client_id}
-        for key in ("intro", "address", "label", "template",
+        for key in ("address",
                     "discount_rate", "discount_date", "currency_code",
-                    "supply_date", "supply_date_type", "note", "title"):
+                    "supply_date", "supply_date_type", "title"):
             val = offer.get(key)
             if val:
                 payload[key] = val
+        if intro:
+            payload["intro"] = intro
+        if note:
+            payload["note"] = note
+        if label:
+            payload["label"] = label
+        elif offer.get("label"):
+            payload["label"] = offer["label"]
+        if template:
+            tid = _resolve_template_id(template)
+            if tid is None:
+                return (
+                    f"Fehler: Template '{template}' nicht gefunden. "
+                    f"Verfuegbare Templates via billomat_list_templates() "
+                    f"pruefen."
+                )
+            payload["template_id"] = tid
 
         c_result = api_request("confirmations", "POST", {"confirmation": payload})
         if "error" in c_result:
@@ -1287,6 +1382,39 @@ def billomat_create_confirmation_from_offer(offer_id: int) -> str:
     if not confirmation_id:
         return "Fehler: Konnte Confirmation-ID nicht ermitteln"
 
+    # Wenn Direct-Endpoint genutzt wurde UND der Caller eigene
+    # AB-Texte / Template mitgegeben hat, ueberschreiben wir die
+    # uebernommenen Angebots-Texte direkt nach Erstellung.
+    update_payload: dict = {}
+    update_warning = None
+    if not used_fallback:
+        if intro:
+            update_payload["intro"] = intro
+        if note:
+            update_payload["note"] = note
+        if label:
+            update_payload["label"] = label
+        if template:
+            tid = _resolve_template_id(template)
+            if tid is None:
+                update_warning = (
+                    f"Template '{template}' nicht gefunden - "
+                    f"AB nutzt Billomat-Default."
+                )
+            else:
+                update_payload["template_id"] = tid
+    if update_payload:
+        upd_result = api_request(
+            f"confirmations/{confirmation_id}", "PUT",
+            {"confirmation": update_payload},
+        )
+        if "error" in upd_result:
+            update_warning = (
+                f"Texte konnten nicht aktualisiert werden: {upd_result['error']}"
+            )
+        else:
+            confirmation = upd_result.get("confirmation", confirmation)
+
     link_ref = make_link_ref(confirmation_id, LINK_TYPE_CONFIRMATION)
     web_link = _build_web_link("confirmations", confirmation_id)
     register_link(link_ref, web_link)
@@ -1315,7 +1443,109 @@ def billomat_create_confirmation_from_offer(offer_id: int) -> str:
         for err in copy_errors:
             output.append(f"  ! {err}")
 
+    if update_warning:
+        output.append("")
+        output.append(f"Warnung: {update_warning}")
+
     return "\n".join(output)
+
+
+@mcp.tool()
+def billomat_update_confirmation(
+    confirmation_id: int,
+    intro: str = "",
+    note: str = "",
+    label: str = "",
+    address: str = "",
+    title: str = "",
+    date: str = "",
+    supply_date: str = "",
+    template: str = "",
+) -> str:
+    """Aktualisiert eine Auftragsbestaetigung im DRAFT-Status.
+
+    Anwendungsfall: Eine AB wurde aus einem Angebot erzeugt und enthaelt
+    noch Angebots-Wording (Intro/Anmerkungen) oder das falsche Template
+    (DE statt EN). Mit diesem Tool koennen AB-spezifische Texte und
+    Sprache nachgezogen werden, ohne die AB neu anzulegen.
+
+    WICHTIG: Funktioniert nur fuer Confirmations im Status DRAFT.
+    Finalisierte Confirmations koennen nicht mehr veraendert werden.
+
+    Args:
+        confirmation_id: Die Confirmation-ID
+        intro: Neuer Intro-Text (z.B. "Vielen Dank fuer Ihre Bestellung Nr. ...")
+        note: Neue Anmerkungen (z.B. Zahlungsbedingungen lt. PO)
+        label: Neuer Betreff/Label
+        address: Abweichende Liefer-/Bestelladresse
+        title: Titel
+        date: AB-Datum (YYYY-MM-DD). Pflicht fuer /complete - wird sonst
+              von finalize_confirmation auf heute auto-gefuellt.
+        supply_date: Liefertermin (YYYY-MM-DD)
+        template: Template-Name fuer Sprachwechsel (z.B.
+                  "auftragsbestaetigung-en"). Verfuegbare Templates via
+                  billomat_list_templates().
+
+    Returns:
+        Aktualisierte Confirmation-Details
+    """
+    payload: dict = {}
+    if intro:
+        payload["intro"] = intro
+    if note:
+        payload["note"] = note
+    if label:
+        payload["label"] = label
+    if address:
+        payload["address"] = address
+    if title:
+        payload["title"] = title
+    if date:
+        payload["date"] = date
+    if supply_date:
+        payload["supply_date"] = supply_date
+    if template:
+        tid = _resolve_template_id(template)
+        if tid is None:
+            return (
+                f"Fehler: Template '{template}' nicht gefunden. "
+                f"Verfuegbare Templates via billomat_list_templates()."
+            )
+        payload["template_id"] = tid
+
+    if not payload:
+        return "Fehler: Keine Daten zum Aktualisieren angegeben"
+
+    # Status pruefen, damit Fehler verstaendlich ist
+    info = api_request(f"confirmations/{confirmation_id}")
+    if "error" in info:
+        return f"Fehler beim Laden: {info['error']}"
+    current = info.get("confirmation", {})
+    if not current:
+        return f"Fehler: Auftragsbestaetigung #{confirmation_id} nicht gefunden"
+    status = current.get("status", "")
+    if status != "DRAFT":
+        return (
+            f"Fehler: Update nur im Status DRAFT moeglich. "
+            f"Aktueller Status: {status}. Finalisierte Confirmation muss "
+            f"in der Billomat-Web-UI bearbeitet (oder storniert) werden."
+        )
+
+    result = api_request(
+        f"confirmations/{confirmation_id}", "PUT",
+        {"confirmation": payload},
+    )
+    if "error" in result:
+        return f"Fehler: {result['error']}"
+
+    c = result.get("confirmation", {})
+    edit_url = _build_edit_url("confirmations", confirmation_id)
+    return (
+        f"Auftragsbestaetigung #{confirmation_id} aktualisiert!\n"
+        f"Geaenderte Felder: {', '.join(payload.keys())}\n"
+        f"Status: {c.get('status', '-')}\n"
+        f"Bearbeiten: {edit_url}"
+    )
 
 
 @mcp.tool()
@@ -1396,9 +1626,30 @@ def billomat_finalize_confirmation(confirmation_id: int) -> str:
     Nach Finalisierung erhaelt sie eine offizielle Nummer und das PDF
     kann heruntergeladen werden.
 
+    Auto-Fill: Wenn die AB noch kein 'date' hat, wird automatisch
+    das heutige Datum gesetzt (Billomat verlangt ein Datum fuer den
+    /complete-Aufruf, sonst HTTP 400).
+
     Args:
         confirmation_id: Die Confirmation-ID
     """
+    # Vorab-Check: Datum fehlt? Dann auf heute setzen, sonst schlaegt
+    # /complete fehl ("date is required"). Per Billomat-API kein Default.
+    info = api_request(f"confirmations/{confirmation_id}")
+    if "error" not in info:
+        current = info.get("confirmation", {})
+        if current and not current.get("date"):
+            today = datetime.now().strftime("%Y-%m-%d")
+            patch = api_request(
+                f"confirmations/{confirmation_id}", "PUT",
+                {"confirmation": {"date": today}},
+            )
+            if "error" in patch:
+                return (
+                    f"Fehler: AB hat kein Datum und Auto-Fill auf {today} "
+                    f"fehlgeschlagen: {patch['error']}"
+                )
+
     result = api_request(f"confirmations/{confirmation_id}/complete", "PUT")
     if "error" in result:
         return f"Fehler: {result['error']}"
@@ -1411,8 +1662,61 @@ def billomat_finalize_confirmation(confirmation_id: int) -> str:
         f"- ID: {confirmation_id}\n"
         f"- Nummer: {confirmation.get('confirmation_number', '-')}\n"
         f"- Status: {confirmation.get('status', '-')}\n"
+        f"- Datum: {confirmation.get('date', '-')}\n"
         f"- Summe netto: {confirmation.get('total_net', '0')}EUR\n"
         f"- PDF: billomat_download_confirmation_pdf({confirmation_id})"
+    )
+
+
+@mcp.tool()
+def billomat_finalize_invoice(invoice_id: int) -> str:
+    """Finalisiert eine Rechnung (DRAFT -> OPEN).
+
+    Nach Finalisierung erhaelt die Rechnung eine offizielle Rechnungs-
+    nummer und das PDF kann heruntergeladen werden. Sie kann danach
+    NICHT mehr bearbeitet werden - nur noch storniert (per Storno-
+    Rechnung) oder als bezahlt markiert.
+
+    Auto-Fill: Wenn die Rechnung noch kein 'date' hat, wird automatisch
+    das heutige Datum gesetzt (Billomat verlangt ein Datum fuer den
+    /complete-Aufruf, sonst HTTP 400 "date is required").
+
+    Args:
+        invoice_id: Die Rechnungs-ID
+    """
+    # Vorab-Check: Datum fehlt? Dann auf heute setzen.
+    info = api_request(f"invoices/{invoice_id}")
+    if "error" not in info:
+        current = info.get("invoice", {})
+        if current and not current.get("date"):
+            today = datetime.now().strftime("%Y-%m-%d")
+            patch = api_request(
+                f"invoices/{invoice_id}", "PUT",
+                {"invoice": {"date": today}},
+            )
+            if "error" in patch:
+                return (
+                    f"Fehler: Rechnung hat kein Datum und Auto-Fill auf "
+                    f"{today} fehlgeschlagen: {patch['error']}"
+                )
+
+    result = api_request(f"invoices/{invoice_id}/complete", "PUT")
+    if "error" in result:
+        return f"Fehler: {result['error']}"
+
+    invoice_result = api_request(f"invoices/{invoice_id}")
+    invoice = invoice_result.get("invoice", {})
+
+    return (
+        f"Rechnung finalisiert!\n"
+        f"- ID: {invoice_id}\n"
+        f"- Rechnungsnummer: {invoice.get('invoice_number', '-')}\n"
+        f"- Status: {invoice.get('status', '-')}\n"
+        f"- Datum: {invoice.get('date', '-')}\n"
+        f"- Faellig: {invoice.get('due_date', '-')}\n"
+        f"- Summe netto: {invoice.get('total_net', '0')}EUR\n"
+        f"- Summe brutto: {invoice.get('total_gross', '0')}EUR\n"
+        f"- PDF: billomat_download_invoice_pdf({invoice_id})"
     )
 
 
@@ -1421,8 +1725,9 @@ def billomat_download_confirmation_pdf(confirmation_id: int, filename: str = "")
     """Laedt das PDF einer Auftragsbestaetigung herunter.
 
     Das PDF wird im temp-Verzeichnis gespeichert und kann z.B. per
-    create_new_email_with_attachment(...) bzw.
-    create_reply_draft_with_attachment(...) an eine Mail angehaengt werden.
+    outlook_create_reply_draft_with_attachment(...) (lokales Outlook)
+    oder graph_create_reply_draft(..., attachments=...) (MS Graph,
+    inkl. Shared Mailbox via mailbox=...) an eine Mail angehaengt werden.
 
     Args:
         confirmation_id: Die Confirmation-ID
@@ -1442,8 +1747,10 @@ def billomat_download_confirmation_pdf(confirmation_id: int, filename: str = "")
         f"- Datei: {pdf_path}\n"
         f"- Groesse: {size:,} Bytes\n\n"
         f"Zum Anhaengen an E-Mail:\n"
-        f"  create_new_email_with_attachment(to, subject, body, \"{pdf_path}\")\n"
-        f"  create_reply_draft_with_attachment(message_id, body, \"{pdf_path}\")"
+        f"  outlook_create_reply_draft_with_attachment(message_id, body, \"{pdf_path}\")\n"
+        f"  outlook_create_new_email_with_attachment(to, subject, body, \"{pdf_path}\")\n"
+        f"  graph_create_reply_draft(message_id, body, mailbox=\"<optional>\", attachments=\"{pdf_path}\")\n"
+        f"  graph_create_draft(to, subject, body, mailbox=\"<optional>\", attachments=\"{pdf_path}\")"
     )
 
 
@@ -1550,8 +1857,12 @@ def billomat_search_confirmations(confirmation_number: str) -> str:
 @mcp.tool()
 def billomat_create_complete_confirmation_from_offer(
     offer_id: int,
+    intro: str = "",
+    note: str = "",
+    label: str = "",
+    template: str = "",
     finalize: bool = True,
-    download_pdf: bool = True
+    download_pdf: bool = True,
 ) -> str:
     """One-Shot: Auftragsbestaetigung aus Angebot + Finalisieren + PDF-Download.
 
@@ -1560,6 +1871,16 @@ def billomat_create_complete_confirmation_from_offer(
 
     Args:
         offer_id: Angebots-ID aus dem die Confirmation erstellt wird
+        intro: AB-Intro (z.B. "Vielen Dank fuer Ihre Bestellung Nr. 1268837
+               vom 11.05.2026, die wir hiermit gerne bestaetigen.
+               Liefertermin: 13.05.2026"). Wird KEIN intro uebergeben,
+               bleibt das Feld leer/Template-Default - das Angebots-Intro
+               wird bewusst NICHT uebernommen.
+        note: AB-Anmerkungen (z.B. Zahlungsbedingungen lt. PO).
+        label: Betreff/Label fuer die AB.
+        template: AB-Template-Name fuer DE/EN-Steuerung (z.B.
+                  "auftragsbestaetigung-de"). Verfuegbare Templates via
+                  billomat_list_templates().
         finalize: Confirmation direkt finalisieren (Default: True)
         download_pdf: PDF herunterladen (nur wenn finalize=True, Default: True)
 
@@ -1567,7 +1888,9 @@ def billomat_create_complete_confirmation_from_offer(
         Confirmation-Details inkl. PDF-Pfad fuer Mail-Anhang
     """
     # 1. Confirmation aus Angebot
-    create_msg = billomat_create_confirmation_from_offer(offer_id)
+    create_msg = billomat_create_confirmation_from_offer(
+        offer_id, intro=intro, note=note, label=label, template=template
+    )
     if create_msg.startswith("Fehler"):
         return create_msg
 
@@ -1623,7 +1946,8 @@ def billomat_create_complete_confirmation_from_offer(
     output.append(f"Groesse: {pdf_path.stat().st_size:,} Bytes")
     output.append("")
     output.append("Zum Anhaengen an Antwortmail:")
-    output.append(f"  create_reply_draft_with_attachment(message_id, body, \"{pdf_path}\")")
+    output.append(f"  outlook_create_reply_draft_with_attachment(message_id, body, \"{pdf_path}\")")
+    output.append(f"  graph_create_reply_draft(message_id, body, mailbox=\"<optional>\", attachments=\"{pdf_path}\")")
 
     return "\n".join(output)
 
@@ -1686,6 +2010,815 @@ def billomat_create_invoice(
 - Rechnungsnummer: {invoice_number}
 - Bearbeiten: {edit_url}
 - Web: {{{{LINK:{link_ref}}}}}"""
+
+
+# ==================== INVOICE FROM OFFER / CONFIRMATION ====================
+# Workflow: Offer -> (Confirmation ->) Invoice. Beide Konvertierungen
+# folgen demselben Muster wie create_confirmation_from_offer:
+#   1. Direct-Endpoint (POST /api/{source}/{id}/invoice) probieren
+#   2. Fallback: Quelldaten laden, Items kopieren
+# WICHTIG: intro/note werden NICHT blind aus der Quelle uebernommen,
+# sonst landen Angebots-/AB-Texte in der Rechnung.
+
+# Mapping: source_type -> (source_singular, items_endpoint, item_id_param)
+_INVOICE_SOURCE_META = {
+    "offers": ("offer", "offer-items", "offer_id"),
+    "confirmations": ("confirmation", "confirmation-items", "confirmation_id"),
+}
+
+
+@mcp.tool()
+def billomat_list_templates() -> str:
+    """Listet alle Druckvorlagen (Templates) aus dem Billomat-Account.
+
+    Wichtig fuer DE/EN-Sprachsteuerung: Sprache eines Dokuments wird in
+    Billomat ueber das Template gesteuert (z.B. rechnung-de-software vs.
+    rechnung-en-software). Skills und Agents brauchen die echten
+    Template-Namen, um den template-Param der create_*-Tools zu setzen.
+
+    Returns:
+        Liste mit Name, ID und (falls verfuegbar) format/type je Template.
+    """
+    result = api_request("templates")
+    if "error" in result:
+        return f"Fehler: {result['error']}"
+
+    templates = _normalize_list(result, "templates")
+    if not templates:
+        return "Keine Templates gefunden"
+
+    # Gruppieren nach Doc-Typ falls Billomat 'type' liefert
+    grouped: dict[str, list] = {}
+    for t in templates:
+        # Billomat kennt: invoice, offer, confirmation, reminder, credit_note, ...
+        ttype = (t.get("type") or t.get("kind") or "unknown").lower()
+        grouped.setdefault(ttype, []).append(t)
+
+    output = [f"Templates ({len(templates)}):"]
+    for ttype in sorted(grouped.keys()):
+        output.append("")
+        output.append(f"[{ttype}]")
+        for t in grouped[ttype]:
+            name = t.get("name", "-")
+            tid = t.get("id", "-")
+            fmt = t.get("format", "")
+            extra = f" ({fmt})" if fmt else ""
+            output.append(f"  - {name}  id={tid}{extra}")
+
+    return "\n".join(output)
+
+
+@mcp.tool()
+def billomat_discover_text_templates() -> str:
+    """Sucht den Billomat-API-Endpoint fuer Text-Vorlagen.
+
+    Hintergrund: Im Billomat-Web-UI gibt es im Bereich "Vorlagen / Text"
+    sprachabhaengige Text-Bausteine (z.B. "rechnung-de-software",
+    "rechnung-en-software"). Die liegen NICHT in /api/templates - dort
+    sind nur die Druck-Layouts ("Vorlage 1", "xrechnung", ...).
+
+    Dieses Discovery-Tool probiert mehrere Endpoint-Kandidaten und
+    meldet, welcher 200 OK liefert + ein Sample der Daten. Damit kann
+    der echte Endpoint dann sauber als billomat_list_text_templates +
+    Param in den Doc-Erstellungs-Tools angebunden werden.
+
+    Returns:
+        Zusammenfassung pro Kandidat: HTTP-Status / Treffer / Sample.
+    """
+    candidates = [
+        "free-texts",          # laut Billomat-API-Doku: das ist es
+        "free-texts?type=INVOICE",
+        "text-templates",
+        "letter-templates",
+        "letters/templates",
+        "templates?type=text",
+        "email-templates",
+    ]
+
+    output = ["Billomat Text-Vorlagen Endpoint Discovery:", ""]
+    found_any = False
+
+    for endpoint in candidates:
+        result = api_request(endpoint)
+        if "error" in result:
+            err = result["error"]
+            # Auf 404 nicht aufmerksam machen, aber andere Fehler zeigen
+            if "404" in err:
+                output.append(f"  [404] /api/{endpoint}")
+            else:
+                output.append(f"  [ERR] /api/{endpoint} -> {err[:100]}")
+            continue
+
+        # 200 OK - schauen was zurueckkommt
+        found_any = True
+        # Top-Level Keys
+        keys = list(result.keys())
+        output.append("")
+        output.append(f"  [200] /api/{endpoint}")
+        output.append(f"        Top-Level Keys: {keys}")
+
+        # Versuchen items zu extrahieren - generisch
+        # Billomat-Pattern: {"<plural>": {"<singular>": [...]}}
+        for top_key, top_val in result.items():
+            if not isinstance(top_val, dict):
+                continue
+            for sub_key, sub_val in top_val.items():
+                if isinstance(sub_val, list):
+                    sample = sub_val[:3]
+                elif isinstance(sub_val, dict):
+                    sample = [sub_val]
+                else:
+                    continue
+                output.append(
+                    f"        {top_key}.{sub_key} -> {len(sample)} Sample-Item(s):"
+                )
+                for item in sample:
+                    if isinstance(item, dict):
+                        # Wichtige Felder zeigen
+                        bits = []
+                        for k in ("id", "name", "type", "language",
+                                  "language_code", "format", "subject"):
+                            v = item.get(k)
+                            if v is not None:
+                                bits.append(f"{k}={v}")
+                        if bits:
+                            output.append(f"          - {', '.join(bits)}")
+                        else:
+                            # Fallback: erste 3 Felder
+                            preview = list(item.items())[:3]
+                            output.append(f"          - {preview}")
+
+    if not found_any:
+        output.append("")
+        output.append("KEIN Endpoint gefunden. Naechster Schritt:")
+        output.append("  Browser DevTools (F12) -> Network -> XHR Filter")
+        output.append("  In Billomat eine Text-Vorlage anwenden")
+        output.append("  URL des Calls hier reinpasten")
+
+    return "\n".join(output)
+
+
+# ==================== FREE TEXTS (sprachabhaengige Text-Bausteine) ====================
+# Free Texts sind in Billomat die "Text-Vorlagen" (Web-UI: Vorlagen / Text)
+# pro Doc-Typ. Sie enthalten intro/note mit Platzhaltern wie
+# [Invoice.invoice_number]. Pattern fuer Sprache: Naming-Convention im Namen
+# (z.B. "rechnung-de-software" vs "rechnung-en-software"), kein language-Feld.
+# API: /api/free-texts (siehe billomat.com/en/api/settings/free-texts/).
+
+# Mapping Doc-Typ -> Free-Text type-Wert + Singular-Key der Doc-API
+_FREE_TEXT_TYPE_FOR_DOC = {
+    "invoices": "INVOICE",
+    "confirmations": "CONFIRMATION",
+    "offers": "OFFER",
+    "credit-notes": "CREDIT_NOTE",
+    "reminders": "REMINDER",
+    "delivery-notes": "DELIVERY_NOTE",
+}
+
+
+@mcp.tool()
+def billomat_list_free_texts(type: str = "") -> str:
+    """Listet Text-Vorlagen (Free Texts) aus Billomat.
+
+    Free Texts sind die "Vorlagen / Text" aus dem Billomat-Web-UI -
+    sprachabhaengige Bausteine fuer intro/note pro Doc-Typ. Sprache
+    laeuft ueber den Namen (Konvention z.B. "rechnung-de-software" vs
+    "rechnung-en-software"), nicht ueber ein language-Feld.
+
+    Args:
+        type: Optionaler Filter "INVOICE", "CONFIRMATION", "OFFER",
+              "CREDIT_NOTE", "REMINDER", "DELIVERY_NOTE", "LETTER".
+              Leer = alle Typen.
+
+    Returns:
+        Liste pro Free-Text mit ID, Name, Type, is_default.
+    """
+    endpoint = "free-texts"
+    if type:
+        endpoint += f"?type={urllib.parse.quote(type, safe='')}"
+
+    result = api_request(endpoint)
+    if "error" in result:
+        return f"Fehler: {result['error']}"
+
+    items = _normalize_list(result, "free-texts")
+    if not items:
+        suffix = f" (type={type})" if type else ""
+        return f"Keine Free-Texts gefunden{suffix}"
+
+    # Gruppieren nach Type fuer bessere Lesbarkeit
+    grouped: dict[str, list] = {}
+    for ft in items:
+        t = (ft.get("type") or "UNKNOWN").upper()
+        grouped.setdefault(t, []).append(ft)
+
+    output = [f"Free Texts ({len(items)}):"]
+    for t in sorted(grouped.keys()):
+        output.append("")
+        output.append(f"[{t}]")
+        for ft in grouped[t]:
+            fid = ft.get("id", "-")
+            name = ft.get("name", "-")
+            default_marker = "  *DEFAULT*" if str(ft.get("is_default", "0")) == "1" else ""
+            output.append(f"  - id={fid}  {name}{default_marker}")
+
+    return "\n".join(output)
+
+
+@mcp.tool()
+def billomat_get_free_text(free_text_id: int) -> str:
+    """Holt Inhalt einer Free-Text-Vorlage.
+
+    Liefert intro/note/title/label inklusive Platzhalter. Skills koennen
+    die Texte direkt verwenden oder vorab anschauen, was beim apply_*
+    Aufruf in das Dokument geschrieben wird.
+
+    Args:
+        free_text_id: Die Free-Text-ID (aus billomat_list_free_texts)
+
+    Returns:
+        Alle Felder der Free-Text-Vorlage.
+    """
+    result = api_request(f"free-texts/{free_text_id}")
+    if "error" in result:
+        return f"Fehler: {result['error']}"
+
+    ft = result.get("free-text", {})
+    if not ft:
+        return f"Fehler: Free-Text #{free_text_id} nicht gefunden"
+
+    output = [
+        f"Free Text #{ft.get('id', free_text_id)}:",
+        f"  Name: {ft.get('name', '-')}",
+        f"  Type: {ft.get('type', '-')}",
+        f"  Default: {'ja' if str(ft.get('is_default', '0')) == '1' else 'nein'}",
+    ]
+    for key in ("title", "label", "intro", "note"):
+        val = ft.get(key, "")
+        if val:
+            output.append("")
+            output.append(f"--- {key} ---")
+            output.append(val)
+    return "\n".join(output)
+
+
+def _apply_free_text_to_doc(
+    doc_type: str,
+    doc_id: int,
+    free_text_id: int,
+    overwrite_label: bool = False,
+    overwrite_title: bool = False,
+) -> str:
+    """Wendet eine Free-Text-Vorlage auf ein DRAFT-Dokument an.
+
+    Holt den Free-Text, validiert dass dessen type zum doc_type passt,
+    und ueberschreibt intro/note (optional auch title/label).
+
+    Args:
+        doc_type: "invoices", "confirmations", "offers", ...
+        doc_id: Dokument-ID
+        free_text_id: Free-Text-ID
+        overwrite_label: Wenn True, wird auch label ueberschrieben.
+        overwrite_title: Wenn True, wird auch title ueberschrieben.
+    """
+    expected_type = _FREE_TEXT_TYPE_FOR_DOC.get(doc_type)
+    entity = doc_type.rstrip("s").replace("-", "_")
+    # Singular-Schluessel fuer Confirmation/Invoice/Offer is einfach: "confirmation", "invoice", "offer"
+    api_singular = doc_type.rstrip("s")  # "confirmation", "invoice", "offer"
+
+    # 1. Free-Text laden
+    ft_result = api_request(f"free-texts/{free_text_id}")
+    if "error" in ft_result:
+        return f"Fehler beim Laden des Free-Texts: {ft_result['error']}"
+    ft = ft_result.get("free-text", {})
+    if not ft:
+        return f"Fehler: Free-Text #{free_text_id} nicht gefunden"
+
+    # 2. Type-Match pruefen (defensive: warnen aber durchlassen falls Mismatch
+    # explizit vom Caller gewollt)
+    ft_type = (ft.get("type") or "").upper()
+    type_warning = None
+    if expected_type and ft_type and ft_type != expected_type:
+        type_warning = (
+            f"Warnung: Free-Text type='{ft_type}' passt nicht zu Doc-Typ "
+            f"'{expected_type}'. Wird trotzdem angewendet."
+        )
+
+    # 3. Doc laden + DRAFT-Check
+    doc_result = api_request(f"{doc_type}/{doc_id}")
+    if "error" in doc_result:
+        return f"Fehler beim Laden des Dokuments: {doc_result['error']}"
+    doc = doc_result.get(api_singular, {})
+    if not doc:
+        return f"Fehler: {api_singular} #{doc_id} nicht gefunden"
+    status = doc.get("status", "")
+    if status != "DRAFT":
+        return (
+            f"Fehler: Free-Text-Apply nur im Status DRAFT moeglich. "
+            f"Aktueller Status: {status}."
+        )
+
+    # 4. Update-Payload bauen aus Free-Text
+    payload: dict = {}
+    if ft.get("intro") is not None:
+        payload["intro"] = ft.get("intro", "")
+    if ft.get("note") is not None:
+        payload["note"] = ft.get("note", "")
+    if overwrite_title and ft.get("title"):
+        payload["title"] = ft["title"]
+    if overwrite_label and ft.get("label"):
+        payload["label"] = ft["label"]
+
+    if not payload:
+        return f"Free-Text #{free_text_id} hat weder intro noch note - nichts zu tun."
+
+    # 5. PUT
+    upd = api_request(
+        f"{doc_type}/{doc_id}", "PUT",
+        {api_singular: payload},
+    )
+    if "error" in upd:
+        return f"Fehler beim Update: {upd['error']}"
+
+    fields = ", ".join(payload.keys())
+    output = [
+        f"Free-Text '{ft.get('name', free_text_id)}' angewendet auf "
+        f"{api_singular} #{doc_id}.",
+        f"Geaenderte Felder: {fields}",
+    ]
+    if type_warning:
+        output.append("")
+        output.append(type_warning)
+    return "\n".join(output)
+
+
+@mcp.tool()
+def billomat_apply_free_text_to_invoice(
+    invoice_id: int,
+    free_text_id: int,
+    overwrite_label: bool = False,
+    overwrite_title: bool = False,
+) -> str:
+    """Wendet eine Free-Text-Vorlage auf eine DRAFT-Rechnung an.
+
+    Hauptweg fuer Sprachsteuerung: Skill waehlt anhand
+    customer.language_code die passende free_text_id und ruft dieses
+    Tool. Intro/note werden mit dem Vorlagen-Inhalt ueberschrieben
+    (Platzhalter wie [Invoice.invoice_number] werden von Billomat beim
+    Rendern aufgeloest).
+
+    Args:
+        invoice_id: DRAFT-Rechnung-ID
+        free_text_id: Free-Text-ID (aus billomat_list_free_texts)
+        overwrite_label: Auch label ueberschreiben (Default: False)
+        overwrite_title: Auch title ueberschreiben (Default: False)
+    """
+    return _apply_free_text_to_doc(
+        "invoices", invoice_id, free_text_id,
+        overwrite_label=overwrite_label, overwrite_title=overwrite_title,
+    )
+
+
+@mcp.tool()
+def billomat_apply_free_text_to_confirmation(
+    confirmation_id: int,
+    free_text_id: int,
+    overwrite_label: bool = False,
+    overwrite_title: bool = False,
+) -> str:
+    """Wendet eine Free-Text-Vorlage auf eine DRAFT-Auftragsbestaetigung an.
+
+    Args:
+        confirmation_id: DRAFT-Confirmation-ID
+        free_text_id: Free-Text-ID (Type CONFIRMATION)
+        overwrite_label: Auch label ueberschreiben (Default: False)
+        overwrite_title: Auch title ueberschreiben (Default: False)
+    """
+    return _apply_free_text_to_doc(
+        "confirmations", confirmation_id, free_text_id,
+        overwrite_label=overwrite_label, overwrite_title=overwrite_title,
+    )
+
+
+@mcp.tool()
+def billomat_apply_free_text_to_offer(
+    offer_id: int,
+    free_text_id: int,
+    overwrite_label: bool = False,
+    overwrite_title: bool = False,
+) -> str:
+    """Wendet eine Free-Text-Vorlage auf ein DRAFT-Angebot an.
+
+    Args:
+        offer_id: DRAFT-Offer-ID
+        free_text_id: Free-Text-ID (Type OFFER)
+        overwrite_label: Auch label ueberschreiben (Default: False)
+        overwrite_title: Auch title ueberschreiben (Default: False)
+    """
+    return _apply_free_text_to_doc(
+        "offers", offer_id, free_text_id,
+        overwrite_label=overwrite_label, overwrite_title=overwrite_title,
+    )
+
+
+def _resolve_template_id(template_name: str) -> int | None:
+    """Sucht template_id anhand des Template-Namens (case-insensitive).
+
+    Billomat Account-Settings haben oft kein Default-Invoice-Template,
+    dann wirft /complete bzw. POST invoices "no valid template_id given".
+    Caller sollten daher meist explizit ein Template setzen.
+
+    Returns:
+        template_id oder None falls nicht gefunden / API-Fehler.
+    """
+    if not template_name:
+        return None
+    templates_result = api_request("templates")
+    if "error" in templates_result:
+        return None
+    templates = _normalize_list(templates_result, "templates")
+    for t in templates:
+        if t.get("name", "").lower() == template_name.lower():
+            tid = t.get("id")
+            if tid:
+                return int(tid)
+    return None
+
+
+def _create_invoice_from_source(
+    source_type: str,
+    source_id: int,
+    intro: str = "",
+    note: str = "",
+    label: str = "",
+    template: str = "",
+) -> tuple[str, str]:
+    """Generischer Helper fuer Invoice aus Offer/Confirmation.
+
+    Returns:
+        (output_message, invoice_id_str). invoice_id_str ist "" bei Fehler.
+    """
+    meta = _INVOICE_SOURCE_META.get(source_type)
+    if not meta:
+        return f"Fehler: Unbekannter source_type '{source_type}'", ""
+    src_singular, items_endpoint, item_id_param = meta
+
+    # 1. Quelle laden
+    src_result = api_request(f"{source_type}/{source_id}")
+    if "error" in src_result:
+        return f"Fehler beim Laden der Quelle: {src_result['error']}", ""
+    source_doc = src_result.get(src_singular, {})
+    if not source_doc:
+        return f"Fehler: {src_singular} #{source_id} nicht gefunden", ""
+
+    # 2. Direct-Endpoint versuchen
+    direct_result = api_request(f"{source_type}/{source_id}/invoice", "POST")
+    invoice: dict = {}
+    used_fallback = False
+
+    if "error" not in direct_result:
+        invoice = direct_result.get("invoice", {})
+
+    if not invoice:
+        # 3. Fallback: manuell anlegen
+        used_fallback = True
+        client_id = source_doc.get("client_id")
+        if not client_id:
+            return f"Fehler: {src_singular} hat keine Kunden-ID", ""
+
+        payload: dict = {"client_id": client_id}
+        # Konditionen/Adresse aus Quelle uebernehmen, aber NICHT:
+        # - intro/note (Quell-spezifisches Wording)
+        # - template_id (gehoert i.d.R. zu Offer/Confirmation, nicht Invoice -
+        #   Billomat wirft sonst "no valid template_id given")
+        for key in ("address",
+                    "discount_rate", "discount_date", "currency_code",
+                    "supply_date", "supply_date_type", "title",
+                    "due_date", "payment_types"):
+            val = source_doc.get(key)
+            if val not in (None, ""):
+                payload[key] = val
+        if intro:
+            payload["intro"] = intro
+        if note:
+            payload["note"] = note
+        if label:
+            payload["label"] = label
+        elif source_doc.get("label"):
+            payload["label"] = source_doc["label"]
+        if template:
+            tid = _resolve_template_id(template)
+            if tid is None:
+                return (
+                    f"Fehler: Template '{template}' nicht gefunden. "
+                    f"Mit billomat_get_articles oder Web-UI verfuegbare "
+                    f"Templates pruefen."
+                ), ""
+            payload["template_id"] = tid
+
+        inv_result = api_request("invoices", "POST", {"invoice": payload})
+        if "error" in inv_result:
+            return f"Fehler beim Erstellen: {inv_result['error']}", ""
+        invoice = inv_result.get("invoice", {})
+        invoice_id_local = invoice.get("id")
+
+        # 4. Positionen kopieren
+        items_result = api_request(f"{items_endpoint}?{item_id_param}={source_id}")
+        src_items = _normalize_list(items_result, items_endpoint)
+        copy_errors = []
+        for item in src_items:
+            new_item = {"invoice_id": invoice_id_local}
+            for key in ("article_id", "unit", "quantity", "unit_price",
+                        "tax_name", "tax_rate", "title", "description",
+                        "total_gross", "total_net", "reduction"):
+                val = item.get(key)
+                if val not in (None, ""):
+                    new_item[key] = val
+            r = api_request("invoice-items", "POST", {"invoice-item": new_item})
+            if "error" in r:
+                copy_errors.append(item.get("title", "?") + ": " + r["error"])
+        if copy_errors:
+            invoice["__copy_errors"] = copy_errors
+
+    invoice_id = str(invoice.get("id", ""))
+    if not invoice_id:
+        return "Fehler: Konnte Invoice-ID nicht ermitteln", ""
+
+    # 5. Direct-Endpoint Texte/Template ueberschreiben falls Caller eigene mitgegeben
+    update_warning = None
+    if not used_fallback:
+        update_payload: dict = {}
+        if intro:
+            update_payload["intro"] = intro
+        if note:
+            update_payload["note"] = note
+        if label:
+            update_payload["label"] = label
+        if template:
+            tid = _resolve_template_id(template)
+            if tid is None:
+                update_warning = (
+                    f"Template '{template}' nicht gefunden - "
+                    f"Invoice nutzt Billomat-Default."
+                )
+            else:
+                update_payload["template_id"] = tid
+        if update_payload:
+            upd = api_request(
+                f"invoices/{invoice_id}", "PUT",
+                {"invoice": update_payload},
+            )
+            if "error" in upd:
+                update_warning = (
+                    f"Texte konnten nicht aktualisiert werden: {upd['error']}"
+                )
+            else:
+                invoice = upd.get("invoice", invoice)
+
+    link_ref = make_link_ref(invoice_id, LINK_TYPE_INVOICE)
+    register_link(link_ref, _build_web_link("invoices", invoice_id))
+    edit_url = _build_edit_url("invoices", int(invoice_id))
+
+    src_link_type = LINK_TYPE_OFFER if source_type == "offers" else LINK_TYPE_CONFIRMATION
+    src_link_ref = make_link_ref(str(source_id), src_link_type)
+    register_link(src_link_ref, _build_web_link(source_type, source_id))
+
+    src_label = "Angebot" if source_type == "offers" else "Auftragsbestaetigung"
+    output = [
+        f"Rechnung aus {src_label} #{source_id} [{src_link_ref}] erstellt!",
+        f"- Invoice-ID: {invoice_id} [{link_ref}]",
+        f"- Status: {invoice.get('status', 'DRAFT')}",
+        f"- Methode: {'Fallback (manuell kopiert)' if used_fallback else 'Direkt-Endpoint'}",
+        f"- Bearbeiten: {edit_url}",
+        f"- Web: {{{{LINK:{link_ref}}}}}",
+    ]
+
+    copy_errors = invoice.get("__copy_errors")
+    if copy_errors:
+        output.append("")
+        output.append("Warnungen beim Kopieren der Positionen:")
+        for err in copy_errors:
+            output.append(f"  ! {err}")
+    if update_warning:
+        output.append("")
+        output.append(f"Warnung: {update_warning}")
+
+    return "\n".join(output), invoice_id
+
+
+@mcp.tool()
+def billomat_create_invoice_from_offer(
+    offer_id: int,
+    intro: str = "",
+    note: str = "",
+    label: str = "",
+    template: str = "",
+) -> str:
+    """Erstellt eine Rechnung direkt aus einem Angebot.
+
+    Anwendungsfall: Kleiner Auftrag ohne separate Auftragsbestaetigung -
+    aus einem akzeptierten Angebot wird direkt fakturiert.
+
+    WICHTIG: Angebots-Intro ("...folgendes Angebot unterbreiten...") wird
+    bewusst NICHT in die Rechnung uebernommen. Wird kein intro/note
+    uebergeben, bleiben die Felder leer (oder Template-Default).
+
+    Args:
+        offer_id: Die Angebots-ID
+        intro: Rechnungs-Intro (z.B. "Wie vereinbart erlauben wir uns
+               folgende Lieferung in Rechnung zu stellen.")
+        note: Rechnungs-Anmerkungen (Zahlungsbedingungen etc.)
+        label: Betreff/Label
+        template: Rechnungs-Template-Name (z.B. "rechnung-de-software").
+                  Pflicht falls Billomat-Account kein Default-Invoice-Template
+                  hat - sonst HTTP 400 "no valid template_id given" bei
+                  Erstellung oder Finalisierung. Das Angebots-Template wird
+                  NICHT uebernommen, weil es zu Offers gehoert.
+
+    Returns:
+        Invoice-Details (Status: DRAFT) - muss noch finalisiert werden
+    """
+    msg, _ = _create_invoice_from_source(
+        "offers", offer_id, intro=intro, note=note, label=label, template=template,
+    )
+    return msg
+
+
+@mcp.tool()
+def billomat_create_invoice_from_confirmation(
+    confirmation_id: int,
+    intro: str = "",
+    note: str = "",
+    label: str = "",
+    template: str = "",
+) -> str:
+    """Erstellt eine Rechnung aus einer Auftragsbestaetigung.
+
+    Hauptweg: Lieferung erfolgt -> aus der AB wird die Rechnung erzeugt.
+    Kunde, Adresse, Positionen, Konditionen aus der AB uebernommen.
+
+    WICHTIG: AB-Intro ("Vielen Dank fuer Ihre Bestellung...bestaetigen.")
+    wird NICHT als Rechnungs-Intro uebernommen.
+
+    Args:
+        confirmation_id: Die Confirmation-ID
+        intro: Rechnungs-Intro
+        note: Rechnungs-Anmerkungen
+        label: Betreff/Label
+        template: Rechnungs-Template-Name. Pflicht falls Billomat-Account
+                  kein Default-Invoice-Template hat (sonst HTTP 400). Das
+                  AB-Template wird NICHT uebernommen.
+
+    Returns:
+        Invoice-Details (Status: DRAFT) - muss noch finalisiert werden
+    """
+    msg, _ = _create_invoice_from_source(
+        "confirmations", confirmation_id, intro=intro, note=note, label=label,
+        template=template,
+    )
+    return msg
+
+
+def _finalize_and_download_invoice(
+    invoice_id_str: str,
+    finalize: bool,
+    download_pdf: bool,
+) -> list[str]:
+    """Gemeinsame Finalize+PDF Logik fuer Invoice One-Shot Tools."""
+    output: list[str] = []
+    try:
+        invoice_id = int(invoice_id_str)
+    except (TypeError, ValueError):
+        return [f"Warnung: Ungueltige Invoice-ID '{invoice_id_str}'"]
+
+    if not finalize:
+        return output
+
+    # Auto-Fill date - sonst HTTP 400 von /complete
+    info = api_request(f"invoices/{invoice_id}")
+    if "error" not in info:
+        current = info.get("invoice", {})
+        if current and not current.get("date"):
+            today = datetime.now().strftime("%Y-%m-%d")
+            patch = api_request(
+                f"invoices/{invoice_id}", "PUT",
+                {"invoice": {"date": today}},
+            )
+            if "error" in patch:
+                output.append(
+                    f"Warnung: Datum-Auto-Fill auf {today} fehlgeschlagen: "
+                    f"{patch['error']}"
+                )
+
+    finalize_result = api_request(f"invoices/{invoice_id}/complete", "PUT")
+    if "error" in finalize_result:
+        output.append(f"Warnung: Finalisierung fehlgeschlagen: {finalize_result['error']}")
+        return output
+
+    inv_data = api_request(f"invoices/{invoice_id}")
+    inv = inv_data.get("invoice", {})
+    output.append("")
+    output.append("Finalisiert:")
+    output.append(f"- Nummer: {inv.get('invoice_number', '-')}")
+    output.append(f"- Status: {inv.get('status', '-')}")
+    output.append(f"- Datum: {inv.get('date', '-')}")
+    output.append(f"- Summe netto: {inv.get('total_net', '0')}EUR")
+
+    if not download_pdf:
+        output.append(f"\nPDF: billomat_download_invoice_pdf({invoice_id})")
+        return output
+
+    success, pdf_result = _download_document_pdf("invoices", invoice_id)
+    if not success:
+        output.append(f"\nWarnung: PDF-Download fehlgeschlagen: {pdf_result}")
+        return output
+
+    pdf_path = Path(pdf_result)
+    output.append("")
+    output.append(f"PDF bereit: {pdf_path}")
+    output.append(f"Groesse: {pdf_path.stat().st_size:,} Bytes")
+    output.append("")
+    output.append("Zum Anhaengen an E-Mail:")
+    output.append(f"  outlook_create_reply_draft_with_attachment(message_id, body, \"{pdf_path}\")")
+    output.append(f"  graph_create_reply_draft(message_id, body, mailbox=\"<optional>\", attachments=\"{pdf_path}\")")
+    return output
+
+
+@mcp.tool()
+def billomat_create_complete_invoice_from_offer(
+    offer_id: int,
+    intro: str = "",
+    note: str = "",
+    label: str = "",
+    template: str = "",
+    finalize: bool = True,
+    download_pdf: bool = True,
+) -> str:
+    """One-Shot: Rechnung aus Angebot + Finalisieren + PDF-Download.
+
+    Auto-Fill von 'date' auf heute wenn leer (sonst HTTP 400 bei /complete).
+
+    Args:
+        offer_id: Angebots-ID
+        intro: Rechnungs-Intro
+        note: Rechnungs-Anmerkungen
+        label: Betreff/Label
+        template: Rechnungs-Template-Name (z.B. "rechnung-de-software" /
+                  "rechnung-en-software"). Pflicht falls Account kein
+                  Default-Invoice-Template hat. Verfuegbare Templates via
+                  billomat_list_templates() pruefen.
+        finalize: Direkt finalisieren (Default: True)
+        download_pdf: PDF herunterladen (nur wenn finalize=True, Default: True)
+
+    Returns:
+        Invoice-Details inkl. PDF-Pfad fuer Mail-Anhang
+    """
+    create_msg, invoice_id = _create_invoice_from_source(
+        "offers", offer_id, intro=intro, note=note, label=label, template=template,
+    )
+    if not invoice_id:
+        return create_msg
+    output = [create_msg]
+    output.extend(_finalize_and_download_invoice(invoice_id, finalize, download_pdf))
+    return "\n".join(output)
+
+
+@mcp.tool()
+def billomat_create_complete_invoice_from_confirmation(
+    confirmation_id: int,
+    intro: str = "",
+    note: str = "",
+    label: str = "",
+    template: str = "",
+    finalize: bool = True,
+    download_pdf: bool = True,
+) -> str:
+    """One-Shot: Rechnung aus Auftragsbestaetigung + Finalisieren + PDF.
+
+    Hauptworkflow nach Lieferung. Auto-Fill von 'date' auf heute.
+
+    Args:
+        confirmation_id: Confirmation-ID
+        intro: Rechnungs-Intro
+        note: Rechnungs-Anmerkungen
+        label: Betreff/Label
+        template: Rechnungs-Template-Name (DE/EN Steuerung).
+                  Verfuegbare Templates via billomat_list_templates().
+        finalize: Direkt finalisieren (Default: True)
+        download_pdf: PDF herunterladen (Default: True)
+
+    Returns:
+        Invoice-Details inkl. PDF-Pfad fuer Mail-Anhang
+    """
+    create_msg, invoice_id = _create_invoice_from_source(
+        "confirmations", confirmation_id, intro=intro, note=note, label=label,
+        template=template,
+    )
+    if not invoice_id:
+        return create_msg
+    output = [create_msg]
+    output.extend(_finalize_and_download_invoice(invoice_id, finalize, download_pdf))
+    return "\n".join(output)
 
 
 @mcp.tool()
@@ -2193,6 +3326,104 @@ def billomat_search_invoices_by_article(
 
 
 @mcp.tool()
+def billomat_update_invoice(
+    invoice_id: int,
+    intro: str = "",
+    note: str = "",
+    label: str = "",
+    address: str = "",
+    title: str = "",
+    date: str = "",
+    due_date: str = "",
+    template: str = "",
+) -> str:
+    """Aktualisiert eine Rechnung im DRAFT-Status.
+
+    Anwendungsfall: Eine Rechnung wurde aus AB/Offer erzeugt und braucht
+    noch Korrekturen am Wording, am Datum oder an der Sprache (Template).
+    Auch fuer manuelles Setzen von 'date' bevor finalize_invoice gerufen
+    wird (sonst HTTP 400 wenn kein Default-Datum).
+
+    WICHTIG: Funktioniert nur fuer Rechnungen im Status DRAFT.
+    Finalisierte Rechnungen koennen nicht mehr veraendert, sondern nur
+    storniert werden.
+
+    Args:
+        invoice_id: Die Rechnungs-ID
+        intro: Neuer Intro-Text (z.B. "Wie vereinbart erlauben wir uns...")
+        note: Neue Anmerkungen (z.B. Zahlungsbedingungen)
+        label: Neuer Betreff/Label
+        address: Abweichende Rechnungsadresse
+        title: Titel
+        date: Rechnungsdatum (YYYY-MM-DD). Pflicht fuer /complete.
+        due_date: Faelligkeitsdatum (YYYY-MM-DD)
+        template: Template-Name fuer Sprachwechsel (z.B.
+                  "rechnung-en-software"). Verfuegbare Templates via
+                  billomat_list_templates().
+
+    Returns:
+        Aktualisierte Rechnungs-Details
+    """
+    payload: dict = {}
+    if intro:
+        payload["intro"] = intro
+    if note:
+        payload["note"] = note
+    if label:
+        payload["label"] = label
+    if address:
+        payload["address"] = address
+    if title:
+        payload["title"] = title
+    if date:
+        payload["date"] = date
+    if due_date:
+        payload["due_date"] = due_date
+    if template:
+        tid = _resolve_template_id(template)
+        if tid is None:
+            return (
+                f"Fehler: Template '{template}' nicht gefunden. "
+                f"Verfuegbare Templates via billomat_list_templates()."
+            )
+        payload["template_id"] = tid
+
+    if not payload:
+        return "Fehler: Keine Daten zum Aktualisieren angegeben"
+
+    # Status-Check
+    info = api_request(f"invoices/{invoice_id}")
+    if "error" in info:
+        return f"Fehler beim Laden: {info['error']}"
+    current = info.get("invoice", {})
+    if not current:
+        return f"Fehler: Rechnung #{invoice_id} nicht gefunden"
+    status = current.get("status", "")
+    if status != "DRAFT":
+        return (
+            f"Fehler: Update nur im Status DRAFT moeglich. "
+            f"Aktueller Status: {status}. Finalisierte Rechnungen muessen "
+            f"in der Billomat-Web-UI bearbeitet (oder storniert) werden."
+        )
+
+    result = api_request(
+        f"invoices/{invoice_id}", "PUT",
+        {"invoice": payload},
+    )
+    if "error" in result:
+        return f"Fehler: {result['error']}"
+
+    inv = result.get("invoice", {})
+    edit_url = _build_edit_url("invoices", invoice_id)
+    return (
+        f"Rechnung #{invoice_id} aktualisiert!\n"
+        f"Geaenderte Felder: {', '.join(payload.keys())}\n"
+        f"Status: {inv.get('status', '-')}\n"
+        f"Bearbeiten: {edit_url}"
+    )
+
+
+@mcp.tool()
 def billomat_update_invoice_item(
     item_id: int,
     unit_price: float = None,
@@ -2262,6 +3493,78 @@ def billomat_delete_invoice_item(item_id: int) -> str:
         return f"Fehler: {result['error']}"
 
     return f"Position #{item_id} erfolgreich gelöscht."
+
+
+# ==================== DELETE / CLEANUP FUNCTIONS ====================
+# Nur DRAFT-Dokumente koennen via API geloescht werden.
+# Finalisierte Dokumente muessen in der Billomat-Web-UI storniert werden.
+
+
+def _delete_document(doc_type: str, doc_id: int) -> str:
+    """Loescht ein offers/invoices/confirmations Dokument im DRAFT-Status."""
+    entity = doc_type.rstrip("s")
+    info = api_request(f"{doc_type}/{doc_id}")
+    if "error" in info:
+        return f"Fehler beim Laden: {info['error']}"
+    doc = info.get(entity, {})
+    if not doc:
+        return f"Fehler: {entity} #{doc_id} nicht gefunden"
+
+    status = doc.get("status", "")
+    if status != "DRAFT":
+        return (
+            f"Fehler: Nur DRAFT-Dokumente koennen via API geloescht werden. "
+            f"Aktueller Status: {status}. Finalisierte/offene Dokumente "
+            f"muessen in der Billomat-Web-UI storniert werden."
+        )
+
+    result = api_request(f"{doc_type}/{doc_id}", "DELETE")
+    if "error" in result:
+        return f"Fehler beim Loeschen: {result['error']}"
+
+    return f"OK: {entity} #{doc_id} (DRAFT) geloescht."
+
+
+@mcp.tool()
+def billomat_delete_invoice(invoice_id: int) -> str:
+    """Loescht eine Rechnung im DRAFT-Status.
+
+    Aufraeumen falls eine Rechnung versehentlich erstellt wurde
+    (z.B. durch fehlgeschlagenen Skill-Lauf).
+
+    WICHTIG: Funktioniert nur fuer Rechnungen im Status DRAFT.
+    Finalisierte Rechnungen muessen in der Billomat-Web-UI storniert werden.
+
+    Args:
+        invoice_id: Die Rechnungs-ID
+    """
+    return _delete_document("invoices", invoice_id)
+
+
+@mcp.tool()
+def billomat_delete_offer(offer_id: int) -> str:
+    """Loescht ein Angebot im DRAFT-Status.
+
+    WICHTIG: Funktioniert nur fuer Angebote im Status DRAFT.
+    Finalisierte Angebote muessen in der Billomat-Web-UI storniert werden.
+
+    Args:
+        offer_id: Die Angebots-ID
+    """
+    return _delete_document("offers", offer_id)
+
+
+@mcp.tool()
+def billomat_delete_confirmation(confirmation_id: int) -> str:
+    """Loescht eine Auftragsbestaetigung im DRAFT-Status.
+
+    WICHTIG: Funktioniert nur fuer Confirmations im Status DRAFT.
+    Finalisierte Confirmations muessen in der Billomat-Web-UI storniert werden.
+
+    Args:
+        confirmation_id: Die Confirmation-ID
+    """
+    return _delete_document("confirmations", confirmation_id)
 
 
 @mcp.tool()
@@ -2534,8 +3837,15 @@ def billomat_add_invoice_items_batch(invoice_id: int, items: str) -> str:
             [
                 {"title": "Beratung 10.12.", "hours": 2, "rate": 150},
                 {"title": "Entwicklung 11.12.", "hours": 5, "rate": 150},
-                {"article": "PROD-1", "quantity": 1}
+                {"article": "PROD-1", "quantity": 1},
+                {"article": "PROD-1", "quantity": 1, "unit_price": 4500.00,
+                 "title": "Sonderkondition lt. AB"}
             ]
+
+        Bei "article" gilt: Wenn 'unit_price' (oder 'price') uebergeben wird,
+        wird DIESER verwendet - nicht der Stammpreis. Damit gehen aus
+        Angeboten/AB uebernommene Sonderkonditionen nicht verloren.
+        'title' und 'description' ueberschreiben ebenfalls den Stamm.
 
     Returns:
         Zusammenfassung aller hinzugefügten Positionen
@@ -2569,6 +3879,13 @@ def billomat_add_invoice_items_batch(invoice_id: int, items: str) -> str:
                 "quantity": quantity
             }
 
+            # Sonderkonditionen: expliziter Preis schlaegt Stammpreis
+            override_price = item.get("unit_price", item.get("price"))
+            if override_price is not None:
+                item_data["unit_price"] = override_price
+            # Titel/Beschreibung optional ueberschreiben
+            if item.get("title"):
+                item_data["title"] = item["title"]
             if item.get("description"):
                 item_data["description"] = item["description"]
 
@@ -2577,9 +3894,14 @@ def billomat_add_invoice_items_batch(invoice_id: int, items: str) -> str:
             if "error" in result:
                 errors.append(f"{article_number}: {result['error']}")
             else:
-                price = float(article.get("sales_price", 0)) * quantity
+                used_price = float(
+                    override_price if override_price is not None
+                    else article.get("sales_price", 0)
+                )
+                price = used_price * quantity
                 total += price
-                added.append(f"{article_number} x{quantity}: {price}€")
+                price_note = " (Sonderkondition)" if override_price is not None else ""
+                added.append(f"{article_number} x{quantity}: {price}€{price_note}")
 
         else:
             # Manuelle Position (Stunden/Dienstleistung)

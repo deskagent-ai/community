@@ -9,6 +9,7 @@ Microsoft Graph MCP - Email Module
 Email search, read, and management tools.
 """
 
+import base64
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -21,8 +22,14 @@ except ImportError:
 from msgraph.base import (
     mcp, require_auth,
     graph_request, MessageFormatter, html_to_text,
-    mcp_log
+    mcp_log,
+    GRAPH_BASE_URL, get_access_token,
 )
+
+# Inline-Limit per Graph-API: 3 MB. Darueber Upload-Session.
+_INLINE_ATTACHMENT_MAX = 3 * 1024 * 1024
+# Upload-Session-Chunk: muss Vielfaches von 320 KiB sein (Graph-Anforderung).
+_UPLOAD_CHUNK_SIZE = 5 * 320 * 1024  # 1.6 MB
 
 # Import link utilities for link_ref generation
 import sys
@@ -707,9 +714,119 @@ def graph_delete_email(message_id: str, mailbox: str = None) -> str:
         return f"ERROR: {e}"
 
 
+def _message_base(message_id: str = None, mailbox: str = None) -> str:
+    """Build Graph endpoint base for a (potentially shared-mailbox) message.
+
+    Args:
+        message_id: Optional message ID. If omitted, returns the messages collection base.
+        mailbox: Optional mailbox UPN (z.B. info@firma.de). None -> /me.
+    """
+    user_part = f"/users/{mailbox}" if mailbox else "/me"
+    if message_id:
+        return f"{user_part}/messages/{message_id}"
+    return f"{user_part}/messages"
+
+
+def _attach_file_to_draft(draft_id: str, mailbox: str, file_path: Path) -> tuple[bool, str]:
+    """Attach a single file to an existing draft.
+
+    Uses inline base64 for files <= 3 MB, upload session for larger files.
+
+    Returns:
+        (success, info_message)
+    """
+    if not file_path.exists() or not file_path.is_file():
+        return False, f"{file_path.name}: Datei nicht gefunden"
+
+    size = file_path.stat().st_size
+    base = _message_base(draft_id, mailbox)
+
+    if size <= _INLINE_ATTACHMENT_MAX:
+        try:
+            content_b64 = base64.b64encode(file_path.read_bytes()).decode("ascii")
+            attachment = {
+                "@odata.type": "#microsoft.graph.fileAttachment",
+                "name": file_path.name,
+                "contentBytes": content_b64,
+            }
+            graph_request(f"{base}/attachments", method="POST", json_body=attachment)
+            return True, f"{file_path.name} ({size:,} B, inline)"
+        except Exception as e:
+            return False, f"{file_path.name}: {e}"
+
+    # Upload session for large files
+    if requests is None:
+        return False, f"{file_path.name}: requests fehlt - kann grosse Datei nicht hochladen"
+
+    try:
+        session_resp = graph_request(
+            f"{base}/attachments/createUploadSession",
+            method="POST",
+            json_body={
+                "AttachmentItem": {
+                    "attachmentType": "file",
+                    "name": file_path.name,
+                    "size": size,
+                }
+            },
+        )
+        upload_url = session_resp.get("uploadUrl")
+        if not upload_url:
+            return False, f"{file_path.name}: Upload-Session fehlgeschlagen"
+
+        with file_path.open("rb") as fh:
+            offset = 0
+            while offset < size:
+                chunk = fh.read(_UPLOAD_CHUNK_SIZE)
+                if not chunk:
+                    break
+                end = offset + len(chunk) - 1
+                headers = {
+                    "Content-Length": str(len(chunk)),
+                    "Content-Range": f"bytes {offset}-{end}/{size}",
+                }
+                # Pre-authenticated URL - kein Bearer-Header erlaubt
+                resp = requests.put(upload_url, headers=headers, data=chunk, timeout=300)
+                if resp.status_code not in (200, 201, 202):
+                    return False, f"{file_path.name}: HTTP {resp.status_code} {resp.text[:200]}"
+                offset = end + 1
+
+        return True, f"{file_path.name} ({size:,} B, upload-session)"
+
+    except Exception as e:
+        return False, f"{file_path.name}: {e}"
+
+
+def _attach_files_to_draft(draft_id: str, mailbox: str, paths_str: str) -> list[str]:
+    """Attach multiple files (comma-separated paths) to a draft.
+
+    Returns list of status lines for each attempted attachment.
+    """
+    if not paths_str:
+        return []
+
+    results = []
+    for raw in paths_str.split(","):
+        path_str = raw.strip().strip('"').strip("'")
+        if not path_str:
+            continue
+        ok, info = _attach_file_to_draft(draft_id, mailbox, Path(path_str))
+        prefix = "  + " if ok else "  ! "
+        results.append(prefix + info)
+
+    return results
+
+
 @mcp.tool()
 @require_auth
-def graph_create_draft(to: str, subject: str, body: str, cc: str = None) -> str:
+def graph_create_draft(
+    to: str,
+    subject: str,
+    body: str,
+    cc: str = None,
+    mailbox: str = None,
+    attachments: str = None,
+) -> str:
     """Create an email draft (does NOT send).
 
     Args:
@@ -717,9 +834,15 @@ def graph_create_draft(to: str, subject: str, body: str, cc: str = None) -> str:
         subject: Email subject
         body: Email body (plain text)
         cc: Optional CC recipients, comma-separated
+        mailbox: Optional shared mailbox UPN (e.g. "info@firma.de").
+                 Default: signed-in user. Erforderlich, damit der Draft im
+                 Drafts-Ordner der Shared Mailbox landet (nicht beim User).
+        attachments: Optional comma-separated absolute file paths to attach.
+                     Files <=3MB werden inline (Base64) angehaengt, groessere
+                     ueber Graph Upload-Session.
 
     Returns:
-        Draft ID or error
+        Draft ID + Anhang-Status oder Fehler
     """
     try:
         to_recipients = [{"emailAddress": {"address": addr.strip()}} for addr in to.split(",")]
@@ -736,10 +859,23 @@ def graph_create_draft(to: str, subject: str, body: str, cc: str = None) -> str:
             "isDraft": True
         }
 
-        result = graph_request("/me/messages", method="POST", json_body=message)
+        endpoint = _message_base(mailbox=mailbox)
+        result = graph_request(endpoint, method="POST", json_body=message)
         draft_id = result.get("id", "")
 
-        return f"Draft created in Drafts folder. ID: {draft_id}"
+        if not draft_id:
+            return "ERROR: Draft-ID nicht erhalten"
+
+        location = f"{mailbox}/Drafts" if mailbox else "Drafts"
+        lines = [f"Draft created in {location}. ID: {draft_id}"]
+
+        if attachments:
+            attach_results = _attach_files_to_draft(draft_id, mailbox, attachments)
+            if attach_results:
+                lines.append("Anhaenge:")
+                lines.extend(attach_results)
+
+        return "\n".join(lines)
 
     except Exception as e:
         return f"ERROR: {e}"
@@ -747,7 +883,13 @@ def graph_create_draft(to: str, subject: str, body: str, cc: str = None) -> str:
 
 @mcp.tool()
 @require_auth
-def graph_create_reply_draft(message_id: str, body: str, reply_all: bool = True, mailbox: str = None) -> str:
+def graph_create_reply_draft(
+    message_id: str,
+    body: str,
+    reply_all: bool = True,
+    mailbox: str = None,
+    attachments: str = None,
+) -> str:
     """Create a reply draft (does NOT send).
 
     Automatically cleans up markdown code fences from LLM output.
@@ -756,60 +898,69 @@ def graph_create_reply_draft(message_id: str, body: str, reply_all: bool = True,
         message_id: The email message ID to reply to
         body: Reply body text
         reply_all: If True, reply to all recipients (default: True)
-        mailbox: Optional mailbox (default: signed-in user)
+        mailbox: Optional shared mailbox UPN (e.g. "info@firma.de").
+                 Default: signed-in user. Reply-Draft landet im Drafts-Ordner
+                 dieser Mailbox.
+        attachments: Optional comma-separated absolute file paths to attach.
 
     Returns:
-        Draft ID or error
+        Draft ID + Anhang-Status oder Fehler
     """
     # Clean markdown fences from agent output
-    body = strip_markdown_fences(body)
+    body = strip_markdown_fences(body) if body else ""
 
     try:
-        if mailbox:
-            base = f"/users/{mailbox}/messages/{message_id}"
-        else:
-            base = f"/me/messages/{message_id}"
+        base = _message_base(message_id, mailbox)
 
-        # Create reply draft (not send)
+        # Microsoft Graph akzeptiert einen 'comment'-Param direkt bei
+        # createReply/createReplyAll - Server fuegt den Text VOR das
+        # gequotete Original ein. Atomar, kein PATCH-Hack noetig.
+        # Doku: https://learn.microsoft.com/graph/api/message-createreplyall
         endpoint = f"{base}/createReplyAll" if reply_all else f"{base}/createReply"
+        payload: dict = {}
+        if body:
+            payload["comment"] = body
 
-        result = graph_request(endpoint, method="POST", json_body={})
+        result = graph_request(endpoint, method="POST", json_body=payload)
         draft_id = result.get("id", "")
 
-        # Update the draft: prepend reply text BEFORE existing body (signature + thread)
-        if draft_id and body:
-            # Read existing draft body (contains signature + quoted original)
-            draft_endpoint = f"/me/messages/{draft_id}"
-            draft = graph_request(draft_endpoint, method="GET")
-            existing_body = draft.get("body", {})
-            existing_content = existing_body.get("content", "")
-            content_type = existing_body.get("contentType", "html")
+        # Fallback: Graph kann auch 202 Accepted ohne Body antworten.
+        # Dann ist die Draft-ID nicht im Response - wir holen den neuesten
+        # Draft aus dem Drafts-Ordner (defensive, sollte selten greifen).
+        if not draft_id:
+            drafts_base = _message_base(mailbox=mailbox)
+            mailfolders_prefix = (
+                f"/users/{mailbox}" if mailbox else "/me"
+            )
+            try:
+                drafts = graph_request(
+                    f"{mailfolders_prefix}/mailFolders/drafts/messages"
+                    f"?$top=1&$orderby=createdDateTime desc",
+                )
+                items = drafts.get("value", [])
+                if items:
+                    draft_id = items[0].get("id", "")
+            except Exception:
+                pass
 
-            # Convert reply text to HTML paragraphs
-            reply_paragraphs = body.replace("\n\n", "</p><p>").replace("\n", "<br>")
-            reply_html = f"<p>{reply_paragraphs}</p><br>"
+        if not draft_id:
+            return (
+                "ERROR: Draft-ID konnte nicht ermittelt werden. "
+                "Reply wurde evtl. erstellt - bitte im Drafts-Ordner pruefen."
+            )
 
-            if content_type.lower() == "html" and existing_content:
-                # Insert reply before existing content (signature + thread)
-                # Find <body> tag or start of content
-                body_match = re.search(r'(<body[^>]*>)', existing_content, re.IGNORECASE)
-                if body_match:
-                    insert_pos = body_match.end()
-                    new_content = existing_content[:insert_pos] + reply_html + existing_content[insert_pos:]
-                else:
-                    new_content = reply_html + existing_content
-            else:
-                new_content = reply_html + existing_content
+        location = f"{mailbox}/Drafts" if mailbox else "Drafts"
+        lines = [f"Reply draft created in {location}. ID: {draft_id}"]
+        if body:
+            lines.append(f"Body: {len(body)} Zeichen eingefuegt via 'comment'-Param")
 
-            update_body = {
-                "body": {
-                    "contentType": "html",
-                    "content": new_content
-                }
-            }
-            graph_request(draft_endpoint, method="PATCH", json_body=update_body)
+        if attachments:
+            attach_results = _attach_files_to_draft(draft_id, mailbox, attachments)
+            if attach_results:
+                lines.append("Anhaenge:")
+                lines.extend(attach_results)
 
-        return f"Reply draft created in Drafts folder. ID: {draft_id}"
+        return "\n".join(lines)
 
     except Exception as e:
         return f"ERROR: {e}"
