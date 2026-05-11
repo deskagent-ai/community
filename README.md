@@ -153,8 +153,8 @@ per server is documented in [knowledge/doc-mcp-tools.md](knowledge/doc-mcp-tools
 | Server | What it does | Status |
 |--------|--------------|--------|
 | `userecho` | UserEcho support tickets | stable |
-| `linkedin` | LinkedIn API (posts, profile, company pages) | stable |
-| `instagram` | Instagram Graph API (posts, stories, insights) | stable |
+| `linkedin` | LinkedIn API (posts, profile, company pages) | **beta** |
+| `instagram` | Instagram Graph API (posts, stories, insights) | **beta** |
 
 **Missing a server? An MCP function that should be there but isn't?**
 Contributions are very welcome. See
@@ -170,19 +170,60 @@ cd deskagent
 
 # macOS / Linux
 ./setup-unix.sh
+./start.sh
 
 # Windows
 setup-python.bat
-
-# Run
-./start.sh    # macOS / Linux
-start.bat     # Windows
+start.bat
 ```
 
 WebUI opens at http://localhost:8765/.
 
 Configure backends and API keys in `config/system.json` and
 `config/backends.json` (templates are provided on first run).
+
+## Platform support
+
+DeskAgent runs on **Windows, macOS, and Linux**.
+
+| Platform | Setup script | Status | Notes |
+|----------|--------------|--------|-------|
+| Windows 10/11 (x64) | `setup-python.bat` | Primary platform | All MCP servers available, plus Outlook Desktop COM and pywin32 clipboard |
+| macOS (Apple Silicon + Intel) | `setup-unix.sh` | Supported | See [knowledge/doc-macos-installation.md](knowledge/doc-macos-installation.md) for Apple-Silicon-specific notes |
+| Linux (x64, glibc) | `setup-unix.sh` | Supported | Tested on Ubuntu 22.04 / 24.04 |
+
+**Prerequisites**
+
+- Python 3.12 (3.12.8+ recommended; 3.13 is **not** supported because spaCy/thinc require 3.12 or lower)
+- Git
+- ~2 GB free disk space (Python + deps)
+- ~500 MB extra if you install the optional `[anonymizer]` extra (spaCy + models)
+
+On Windows, `setup-python.bat` downloads an **embedded Python 3.12** into `python/` automatically. On macOS/Linux, `setup-unix.sh` uses your **system Python 3.12** — install it first if needed:
+
+```bash
+# macOS via Homebrew
+brew install python@3.12
+
+# Ubuntu / Debian
+sudo apt install python3.12 python3.12-venv
+
+# Fedora / RHEL
+sudo dnf install python3.12
+```
+
+### Windows-only features
+
+Two MCP servers and a couple of integrations rely on the Windows API and are silently skipped on macOS/Linux:
+
+| Feature | Why Windows-only | Alternative on macOS/Linux |
+|---------|------------------|-----------------------------|
+| `outlook` MCP | Uses Outlook Desktop via COM | Use `gmail`, `imap`, or `msgraph` (all platform-neutral) |
+| `clipboard` MCP | Uses `pywin32` for Windows clipboard | Skills that don't depend on clipboard input still work; on macOS/Linux you can `pip install pyperclip` separately and we accept PRs to wire it in |
+| Streamdeck plugin | Elgato Stream Deck SDK is Windows-only at the OS level | n/a |
+| Signed installer (`.exe`/`.dmg`) | Built only for Windows and macOS | Linux users always run from source via `git clone` |
+
+Everything else — Gmail/IMAP/MS Graph, Billomat, Lexware, sevDesk, SEPA, ecoDMS, Paperless-ngx, PDF, Excel, Browser automation, Filesystem, Datastore, Charts, Telegram, UserEcho, LinkedIn, Instagram, the FastAPI server, the MCP hub, agent and skill loading, anonymization, scheduler, watchers — is fully platform-neutral.
 
 ## Documentation
 
