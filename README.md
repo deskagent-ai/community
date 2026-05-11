@@ -1,39 +1,105 @@
 # DeskAgent
 
-> Open source AI desktop assistant with deep MCP integration.
-> AGPL-3.0 — fully self-hostable.
+> **Your tireless helper. 100% Open Source under AGPL-3.0.**
+> A local-first AI desktop assistant with deep MCP integration.
+> Self-hosted, GDPR-friendly, no cloud lock-in.
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
 [![GitHub Discussions](https://img.shields.io/badge/discuss-on%20github-orange.svg)](https://github.com/deskagent-ai/community/discussions)
 
 ## What is DeskAgent?
 
-DeskAgent is a desktop AI assistant that connects multiple LLM backends
-(Claude, Gemini, OpenAI, local Ollama) with a rich set of MCP servers
-covering email, calendars, document management, accounting, payments,
-PDFs, Excel, and more. Workflows are defined as agents and skills in
-plain Markdown files with frontmatter — no UI clicking, no DSL.
+DeskAgent automates repetitive desk work with plain-text instructions or
+your voice. It plugs multiple LLM backends (Claude, Gemini, OpenAI,
+Mistral, local Qwen/Ollama) into a rich set of MCP servers covering
+email, calendars, document management, accounting, payments, PDFs,
+Excel, browser automation, and more.
 
-It runs locally as a FastAPI server with a browser-based UI, and can
-also act as an MCP hub for Claude Desktop and Claude Code.
+Workflows are defined as **Markdown agents and skills** with a small
+frontmatter — no UI clicking, no DSL, no vendor lock-in. Drop a `.md`
+file into `agents/`, and DeskAgent picks it up. Edit it with any text
+editor. Share it via Git.
+
+DeskAgent runs as a local FastAPI server with a browser-based UI on
+your own machine. It can also act as an **MCP hub** for Claude Desktop
+and Claude Code, so the same agents and skills are available from
+those clients.
+
+## Why DeskAgent?
+
+| | |
+|---|---|
+| 🔒 **Local-first** | Your data stays on your machine. No mandatory cloud, no telemetry. |
+| 🇪🇺 **GDPR-friendly** | Optional PII anonymization layer (Microsoft Presidio) routes only redacted text to LLM providers. |
+| 🔌 **MCP-native** | 22+ built-in MCP servers. Also exposes itself as an MCP hub for Claude Desktop and Claude Code. |
+| 🧩 **Pluggable** | Skills, agents, MCP servers, and full plugins as drop-in folders. Plugin Exception in the license. |
+| 🪶 **Plain Markdown** | Agents are Markdown with frontmatter. Read them, share them, version them. |
+| 🆓 **No subscription** | AGPL-3.0 source. Self-host forever. Commercial license available on request. |
+
+## Who is it for?
+
+- **Freelancers & consultants** drowning in invoices, time tracking, and email replies
+- **Small businesses** that want one place for email, accounting, DMS, and SEPA payments
+- **Support teams** automating ticket triage and first-response drafts
+- **Power users** who want to drive Outlook/Gmail/Excel/PDF from natural language
+- **Developers** building local AI workflows on top of MCP
 
 ## Features
 
 - **Multi-backend LLM**: Claude (API + Agent SDK), Gemini, OpenAI,
   Mistral, local Qwen/Ollama. Switch per agent.
-- **MCP servers** included: Outlook, Gmail, IMAP, Microsoft Graph,
-  Billomat, Lexware, ecoDMS, Paperless-ngx, SEPA, PDF, Excel,
-  Browser, Filesystem, Datastore, Telegram, UserEcho, Instagram,
-  LinkedIn, Clipboard, Charts.
-- **Agents and skills** defined as Markdown files; hot-reloadable.
-- **Voice input** via Whisper (optional extra).
-- **Knowledge base** loaded into agents on demand.
-- **Scheduler and watchers** for hands-free automation.
-- **Optional DSGVO/PII anonymization** via Microsoft Presidio
-  (`pip install deskagent[anonymizer]`).
-- **Plugin system** with a documented API and Plugin Exception in the
-  license.
+## What DeskAgent can do for you
+
+| Workflow | What it does |
+|----------|--------------|
+| 📧 **Email management** | Read, sort, draft replies, flag follow-ups across Outlook, Gmail, IMAP, and Microsoft Graph |
+| 🧾 **Quotes & invoices** | Create offers and invoices in Billomat or Lexware from contacts, time logs, or e-mail bodies |
+| 🎫 **Support tickets** | Triage and draft answers for UserEcho tickets |
+| 💸 **SEPA transfers** | Turn invoice PDFs into pain.001 XML SEPA-credit-transfer batches |
+| 📂 **Document archive** | OCR + auto-tagging for ecoDMS and Paperless-ngx |
+| 🎤 **Voice input** | Whisper-powered hotkey dictation (optional extra) |
+| 📅 **Calendar & meetings** | Read availability, create events, set up Teams meetings via Graph |
+| 📊 **Excel & PDF** | Read/write spreadsheets, extract data from PDFs, render charts |
+| 🌐 **Browser automation** | Drive Chrome via the Chrome DevTools Protocol from agents |
+
+## Use DeskAgent from Claude Desktop and Claude Code
+
+DeskAgent doubles as an **MCP hub**: it exposes all of its 22+ built-in
+MCP servers through a single connection that Claude Desktop and
+Claude Code can talk to. You configure DeskAgent once, and from then
+on Claude has access to Outlook, Gmail, Billomat, Lexware, SEPA,
+ecoDMS, Paperless, Excel, PDF, your browser, your filesystem — all
+through standard MCP.
+
+Why this matters:
+
+- **One connection, many tools.** No need to configure 20 separate MCP
+  servers in Claude Desktop. Hook up DeskAgent once.
+- **The same agents from anywhere.** Workflows defined as Markdown
+  agents are usable from the DeskAgent WebUI, Claude Desktop, and
+  Claude Code. Write a recipe once, trigger it from whichever client
+  you happen to be in.
+- **Local-first.** All MCP calls stay on your machine. Claude only
+  sees the redacted text DeskAgent decides to share.
+- **Voice into Claude Code.** Hotkey + Whisper transcription, then
+  DeskAgent forwards the task to Claude Code in the right project.
+
+See [knowledge/doc-mcp-tools.md](knowledge/doc-mcp-tools.md) for the
+full tool catalog and [knowledge/doc-setup-wizard.md](knowledge/doc-setup-wizard.md)
+for the Claude Desktop / Claude Code hook-up.
+
+## Highlights
+
+- **Multi-backend LLM** — Claude (API + Agent SDK), Gemini, OpenAI, Mistral, local Qwen/Ollama. Pick a different backend per agent.
+- **22+ MCP servers** included — Outlook, Gmail, IMAP, Microsoft Graph, Billomat, Lexware, ecoDMS, Paperless-ngx, SEPA, PDF, Excel, Browser, Filesystem, Datastore, Charts, Telegram, UserEcho, Instagram, LinkedIn, Clipboard. Bring your own via the plugin API.
+- **Hot-reloadable** Markdown agents and skills.
+- **Local knowledge base** loaded into agents on demand.
+- **Scheduler and email watchers** for unattended workflows.
+- **Optional PII anonymization** via Microsoft Presidio (`pip install deskagent[anonymizer]`) — sensitive data is redacted before it reaches the LLM and re-inserted in the response.
+- **Plugin system** with a documented API and a Plugin Exception in the license so proprietary plugins are explicitly allowed.
+- **Streamdeck integration** out of the box.
 
 ## Quick start
 
