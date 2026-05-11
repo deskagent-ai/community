@@ -52,6 +52,15 @@ MANUAL_LICENSES = {
     }
 }
 
+# Manual override for installed packages whose metadata is missing a
+# license entirely (no License field, no License-Expression, no
+# License classifier). Keep this list short — add to it only after
+# verifying upstream license.
+PACKAGE_LICENSE_OVERRIDE = {
+    "qwen-agent": "Apache-2.0",  # github.com/QwenLM/Qwen-Agent LICENSE
+    "dotenv": "BSD-3-Clause",    # PyPI 'dotenv' alias for python-dotenv
+}
+
 
 def get_package_license_text(package_name: str) -> str | None:
     """Try to get the full license text for a package."""
@@ -88,16 +97,36 @@ def get_installed_packages() -> list[dict]:
         name = meta['Name']
         version = meta['Version']
 
-        # Get license info
-        license_name = meta.get('License', 'Unknown')
+        # Get license info - PEP 639 introduced License-Expression which
+        # most modern packages now use INSTEAD of the legacy License field.
+        license_name = (
+            meta.get('License-Expression')
+            or meta.get('License')
+            or ''
+        ).strip()
 
-        # Sometimes license is in classifiers
-        if license_name in ('UNKNOWN', 'Unknown', ''):
+        # If license string is empty or a generic placeholder, look at the
+        # license classifiers. PyPI classifiers follow the pattern:
+        #   "License :: OSI Approved :: MIT License"
+        # so we want the most specific (last) part. We prefer specific names
+        # over generic "OSI Approved" placeholder entries.
+        if not license_name or license_name.upper() in ('UNKNOWN', 'NONE'):
             classifiers = meta.get_all('Classifier') or []
-            for c in classifiers:
-                if c.startswith('License :: OSI Approved ::'):
-                    license_name = c.split('::')[-1].strip()
-                    break
+            license_classifiers = [c for c in classifiers if c.startswith('License ::')]
+            # Prefer the most specific (longest path / OSI-approved variants)
+            specific = [c for c in license_classifiers if 'OSI Approved' in c and c.count('::') >= 3]
+            chosen = specific or license_classifiers
+            if chosen:
+                # Take the deepest classifier
+                license_name = max(chosen, key=lambda c: c.count('::')).split('::')[-1].strip()
+
+        # Treat extremely long "License" strings (some packages embed the full
+        # license text into the License field) as just the SPDX-ish first line.
+        if license_name and len(license_name) > 80:
+            license_name = license_name.split('\n', 1)[0][:80].strip() + '...'
+
+        if not license_name or license_name.upper() in ('UNKNOWN', 'NONE'):
+            license_name = PACKAGE_LICENSE_OVERRIDE.get(name.lower(), 'Unknown')
 
         # Get author info
         author = meta.get('Author', meta.get('Author-email', 'Unknown'))
