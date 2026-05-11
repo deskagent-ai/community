@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeskAgent Setup</title>
+    <link rel="icon" type="image/png" href="/static/icons/favicon-96x96.png" sizes="96x96">
+    <style>
+        /* ========== CSS VARIABLES ========== */
+        :root {
+            /* DeskAgent Brand Colors - matches main UI */
+            --brand-primary: #2196f3;
+            --brand-secondary: #1976d2;
+            --brand-gradient: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+            --brand-gradient-hover: linear-gradient(135deg, #1976d2 0%, #2196f3 100%);
+
+            /* Backgrounds */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f7f7f8;
+            --bg-tertiary: #ececf1;
+
+            /* Text */
+            --text-primary: #343541;
+            --text-secondary: #6e6e80;
+            --text-muted: #8e8ea0;
+
+            /* Borders */
+            --border-color: #e5e5e6;
+            --border-focus: #2196f3;
+
+            /* Status Colors */
+            --success: #22c55e;
+            --success-bg: #f0fdf4;
+            --success-border: #22c55e;
+            --success-text: #16a34a;
+
+            --warning: #f59e0b;
+            --warning-bg: #fffbeb;
+            --warning-border: #f59e0b;
+            --warning-text: #d97706;
+
+            --error: #ef4444;
+            --error-bg: #fef2f2;
+            --error-border: #ef4444;
+            --error-text: #dc2626;
+
+            --info: #2196f3;
+            --info-bg: #f0f7ff;
+            --info-border: #2196f3;
+            --info-text: #1976d2;
+
+            /* Recommended/Accent */
+            --recommended-bg: linear-gradient(135deg, #f3e5f5 0%, #e8eaf6 100%);
+            --recommended-border: #7c4dff;
+            --recommended-text: #5e35b1;
+
+            /* Spacing */
+            --spacing-sm: 8px;
+            --spacing-md: 12px;
+            --spacing-lg: 16px;
+            --spacing-xl: 20px;
+            --spacing-2xl: 24px;
+
+            /* Border Radius */
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 8px;
+            --radius-xl: 12px;
+            --radius-2xl: 16px;
+
+            /* Transitions */
+            --transition-default: all 0.2s ease;
+
+            /* Shadows */
+            --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        /* ========== BASE STYLES ========== */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--brand-gradient);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-xl);
+        }
+
+        /* ========== CONTAINER ========== */
+        .container {
+            background: var(--bg-primary);
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-xl);
+            max-width: 520px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        /* ========== TYPOGRAPHY ========== */
+        h1 {
+            color: var(--text-primary);
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        /* ========== INFO BOXES ========== */
+        .info-box {
+            background: var(--info-bg);
+            border-left: 4px solid var(--info-border);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-2xl);
+            border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+        }
+
+        .info-box h3 {
+            color: var(--info-text);
+            margin-bottom: var(--spacing-sm);
+            font-size: 16px;
+        }
+
+        .info-box p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .info-box a {
+            color: var(--info-text);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .info-box a:hover {
+            text-decoration: underline;
+        }
+
+        .info-box ul {
+            margin: 10px 0 0 18px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* Info Box Variants */
+        .info-box.success {
+            background: var(--success-bg);
+            border-color: var(--success-border);
+        }
+
+        .info-box.success h3 {
+            color: var(--success-text);
+        }
+
+        .info-box.warning {
+            background: var(--warning-bg);
+            border-color: var(--warning-border);
+        }
+
+        .info-box.warning h3 {
+            color: var(--warning-text);
+        }
+
+        .info-box.recommended {
+            background: var(--recommended-bg);
+            border-color: var(--recommended-border);
+        }
+
+        .info-box.recommended h3 {
+            color: var(--recommended-text);
+        }
+
+        .info-box.neutral {
+            background: var(--bg-secondary);
+            border-color: var(--text-muted);
+        }
+
+        .info-box.neutral h3 {
+            color: var(--text-primary);
+        }
+
+        .info-box.blue-accent {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-color: #3b82f6;
+        }
+
+        .info-box.blue-accent h3 {
+            color: #1d4ed8;
+        }
+
+        .info-box.tip {
+            background: var(--bg-secondary);
+            border-color: var(--border-color);
+            border-left-width: 1px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* ========== FORM ELEMENTS ========== */
+        .form-group {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        label {
+            display: block;
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            transition: var(--transition-default);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+        }
+
+        /* Checkbox styling */
+        .checkbox-label {
+            display: flex;
+            align-items: flex-start;
+            cursor: pointer;
+            font-weight: normal;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            margin-right: 10px;
+            margin-top: 3px;
+            width: auto;
+            accent-color: var(--brand-primary);
+        }
+
+        /* ========== BUTTONS ========== */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--brand-gradient);
+            color: white;
+            border: none;
+            border-radius: var(--radius-lg);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-default);
+        }
+
+        .btn:hover {
+            background: var(--brand-gradient-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(33, 150, 243, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-skip {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: var(--transition-default);
+        }
+
+        .btn-skip:hover {
+            border-color: var(--text-muted);
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+        }
+
+        .btn-secondary {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: var(--transition-default);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--text-muted);
+            background: var(--bg-tertiary);
+        }
+
+        .btn-secondary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-blue {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        .btn-blue:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            box-shadow: 0 5px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        /* Button Group */
+        .button-group {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: center;
+            margin-top: var(--spacing-xl);
+        }
+
+        .button-group .btn,
+        .button-group .btn-skip,
+        .button-group .btn-secondary {
+            width: auto;
+            padding: 12px 24px;
+            margin-top: 0;
+        }
+
+        /* ========== STATUS INDICATORS ========== */
+        .status-indicator {
+            padding: 10px 15px;
+            border-radius: var(--radius-md);
+            margin: 15px 0;
+            font-size: 14px;
+        }
+
+        .status-indicator.not-found {
+            background: var(--warning-bg);
+            color: var(--warning-text);
+            border: 1px solid var(--warning-border);
+        }
+
+        .status-indicator.found {
+            background: var(--success-bg);
+            color: var(--success-text);
+            border: 1px solid var(--success-border);
+        }
+
+        /* ========== STATUS BOX ========== */
+        .status-box {
+            padding: var(--spacing-xl);
+            text-align: center;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-color);
+        }
+
+        .status-box.checking {
+            color: var(--text-secondary);
+        }
+
+        .status-box.success {
+            background: var(--success-bg);
+            border-color: var(--success-border);
+            color: var(--success-text);
+        }
+
+        .status-box.warning {
+            background: var(--warning-bg);
+            border-color: var(--warning-border);
+            color: var(--warning-text);
+        }
+
+        .status-box.error {
+            background: var(--error-bg);
+            border-color: var(--error-border);
+            color: var(--error-text);
+        }
+
+        /* ========== PROGRESS BAR ========== */
+        .progress-container {
+            margin-top: var(--spacing-xl);
+            text-align: center;
+        }
+
+        .progress-bar {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            height: 8px;
+            overflow: hidden;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .progress-fill {
+            background: var(--brand-gradient);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin: 0;
+        }
+
+        /* ========== SPINNER ========== */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--brand-primary);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+            margin-right: var(--spacing-sm);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ========== LOADING STATE ========== */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--brand-primary);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        /* ========== STEP INDICATOR ========== */
+        .steps {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            gap: 10px;
+        }
+
+        .step {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--border-color);
+            transition: var(--transition-default);
+        }
+
+        .step.active {
+            background: var(--brand-primary);
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2);
+        }
+
+        .step.done {
+            background: var(--success);
+            cursor: pointer;
+        }
+
+        .step.done:hover {
+            transform: scale(1.3);
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+        }
+
+        .step-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        /* ========== PAGE VISIBILITY ========== */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* ========== ERROR/SUCCESS MESSAGES ========== */
+        .error {
+            color: var(--error-text);
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .success {
+            color: var(--success-text);
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .skip-hint {
+            color: var(--text-muted);
+            font-size: 12px;
+            text-align: center;
+            margin-top: 10px;
+            line-height: 1.6;
+        }
+
+        .skip-hint code {
+            background: var(--bg-secondary);
+            padding: 2px 6px;
+            border-radius: var(--radius-sm);
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        /* ========== CODE INLINE ========== */
+        code {
+            background: var(--bg-secondary);
+            padding: 2px 6px;
+            border-radius: var(--radius-sm);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+        }
+
+        /* ========== LINK STYLING ========== */
+        a {
+            color: var(--info-text);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* ========== DIVIDER ========== */
+        hr {
+            margin: 15px 0;
+            border: none;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* ========== MARGIN HELPERS ========== */
+        .mt-sm { margin-top: var(--spacing-sm); }
+        .mt-md { margin-top: var(--spacing-md); }
+        .mt-lg { margin-top: var(--spacing-lg); }
+        .mt-xl { margin-top: var(--spacing-xl); }
+        .mb-sm { margin-bottom: var(--spacing-sm); }
+        .mb-md { margin-bottom: var(--spacing-md); }
+        .mb-xl { margin-bottom: var(--spacing-xl); }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 560px) {
+            body {
+                padding: var(--spacing-md);
+            }
+
+            .container {
+                padding: var(--spacing-2xl);
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .button-group .btn,
+            .button-group .btn-skip,
+            .button-group .btn-secondary {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Loading State -->
+        <div id="loadingPage" class="page active">
+            <div class="loading">Pruefe System...</div>
+        </div>
+
+        <!-- Page 0: Welcome & License -->
+        <div id="page0" class="page">
+            <div class="steps">
+                <div class="step active" data-step="0"></div>
+                <div class="step" data-step="1"></div>
+                <div class="step" data-step="2"></div>
+                <div class="step" data-step="3"></div>
+                <div class="step" data-step="4"></div>
+                <div class="step" data-step="5"></div>
+            </div>
+            <p class="step-label">Willkommen</p>
+
+            <h1>Willkommen bei DeskAgent</h1>
+            <p class="subtitle">Dein KI-gestuetzter Desktop-Assistent</p>
+
+            <div class="info-box">
+                <h3>&#x1F916; Was ist DeskAgent?</h3>
+                <p>
+                    DeskAgent ist ein intelligenter Desktop-Assistent, der dir bei taeglichen Aufgaben hilft:
+                    E-Mails beantworten, Angebote erstellen, Dokumente verwalten und vieles mehr.
+                </p>
+            </div>
+
+            <div class="info-box neutral">
+                <h3>&#x1F4DC; Nutzungsbedingungen</h3>
+                <p>
+                    Um DeskAgent nutzen zu koennen, musst du unsere Lizenzbedingungen akzeptieren.
+                </p>
+                <p class="mt-md">
+                    <a href="{{BRANDING_LICENSE_URL}}" target="_blank">
+                        &#x2192; Lizenzbedingungen lesen
+                    </a>
+                </p>
+            </div>
+
+            <div class="info-box neutral">
+                <h3>&#x1F512; Datenschutz</h3>
+                <p>
+                    Informationen zur Verarbeitung deiner Daten findest du in unserer Datenschutzerklaerung.
+                </p>
+                <p class="mt-md">
+                    <a href="{{BRANDING_PRIVACY_URL}}" target="_blank">
+                        &#x2192; Datenschutzerklaerung lesen
+                    </a>
+                </p>
+            </div>
+
+            <div class="form-group mt-xl">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="acceptLicense">
+                    <span>Ich habe die <a href="{{BRANDING_LICENSE_URL}}" target="_blank">Lizenzbedingungen</a>
+                    gelesen und akzeptiere diese. Ich habe die
+                    <a href="{{BRANDING_PRIVACY_URL}}" target="_blank">Datenschutzerklaerung</a> zur Kenntnis genommen.</span>
+                </label>
+            </div>
+
+            <button type="button" class="btn" id="acceptBtn" disabled>
+                Weiter zur Einrichtung
+            </button>
+            <p class="error" id="errorMsg0"></p>
+        </div>
+
+        <!-- Page 1: Branding / Ihr Unternehmen -->
+        <div id="page1" class="page">
+            <div class="steps">
+                <div class="step done" data-step="0"></div>
+                <div class="step active" data-step="1"></div>
+                <div class="step" data-step="2"></div>
+                <div class="step" data-step="3"></div>
+                <div class="step" data-step="4"></div>
+                <div class="step" data-step="5"></div>
+                <div class="step" data-step="6"></div>
+            </div>
+
+            <h1>Ihr Unternehmen</h1>
+            <p class="subtitle">Damit DeskAgent Sie besser unterstuetzt</p>
+
+            <div class="info-box neutral">
+                <p style="margin: 0;">
+                    Diese Angaben helfen DeskAgent, Ihre Aufgaben besser zu verstehen.
+                    Alle Felder sind optional und koennen spaeter in den Einstellungen geaendert werden.
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label for="companyName">Firmenname</label>
+                <input type="text" id="companyName" placeholder="z.B. Trattoria Milano" autocomplete="organization">
+            </div>
+
+            <div class="form-group">
+                <label for="companyIndustry">Branche</label>
+                <input type="text" id="companyIndustry" placeholder="z.B. Gastronomie" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="companyLanguage">Sprache</label>
+                <select id="companyLanguage">
+                    <option value="de" selected>Deutsch</option>
+                    <option value="en">English</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="assistantIntro">Beschreibung (optional)</label>
+                <textarea id="assistantIntro" rows="3" placeholder="z.B. Du bist der Assistent fuer die Trattoria Milano, ein italienisches Restaurant in Muenchen."
+                    style="width: 100%; padding: 10px; border: 1px solid var(--border-color, #ddd); border-radius: 6px; font-family: inherit; font-size: 14px; resize: vertical;"></textarea>
+                <p style="font-size: 11px; color: var(--text-secondary, #888); margin-top: 4px;">
+                    Wird als Anweisung an die KI uebergeben. Wenn leer, wird ein Standard-Prompt verwendet.
+                </p>
+            </div>
+
+            <button type="button" class="btn" id="brandingNextBtn">
+                Weiter
+            </button>
+            <button type="button" class="btn-skip" id="brandingSkipBtn">
+                Ueberspringen
+            </button>
+        </div>
+
+        <!-- Page 2: Google Gemini (Primary) -->
+        <div id="page2" class="page">
+            <div class="steps">
+                <div class="step done" data-step="0"></div>
+                <div class="step done" data-step="1"></div>
+                <div class="step active" data-step="2"></div>
+                <div class="step" data-step="3"></div>
+                <div class="step" data-step="4"></div>
+                <div class="step" data-step="5"></div>
+                <div class="step" data-step="6"></div>
+            </div>
+            <p class="step-label">Schritt 1 von 4: Google Gemini</p>
+
+            <h1>Google Gemini</h1>
+            <p class="subtitle">Empfohlenes AI-Backend</p>
+
+            <div class="info-box recommended">
+                <h3>&#x2B50; Empfohlen</h3>
+                <p>
+                    <strong>Google Gemini 2.5 Pro</strong> bietet das beste Preis-Leistungs-Verhaeltnis
+                    und ein kostenloses Kontingent zum Testen.
+                </p>
+                <ul>
+                    <li><strong>E-Mail-Antworten</strong> &ndash; Professionelle Korrespondenz</li>
+                    <li><strong>Angebote &amp; Rechnungen</strong> &ndash; Dokumente erstellen</li>
+                    <li><strong>Dokumenten-Analyse</strong> &ndash; PDFs, Vertraege, Berichte</li>
+                </ul>
+                <p class="mt-md">
+                    <strong>So gehts:</strong><br>
+                    1. Mit Google-Account bei AI Studio anmelden<br>
+                    2. Unter "API Keys" einen Key erstellen<br>
+                    3. Key hier einfuegen
+                </p>
+                <p class="mt-md">
+                    <a href="https://aistudio.google.com/apikey" target="_blank">
+                        &#x2192; Google AI Studio oeffnen
+                    </a>
+                </p>
+            </div>
+
+            <form id="geminiForm">
+                <div class="form-group">
+                    <label for="geminiKey">Gemini API Key</label>
+                    <input type="password" id="geminiKey" name="geminiKey"
+                           placeholder="AIza..." autocomplete="off" value="{{GEMINI_API_KEY}}">
+                </div>
+                <button type="submit" class="btn" id="geminiSubmitBtn">
+                    Weiter
+                </button>
+                <button type="button" class="btn-skip" id="skipGeminiBtn">
+                    Ueberspringen
+                </button>
+            </form>
+            <p class="error" id="errorMsg1"></p>
+        </div>
+
+        <!-- Page 2: Claude AI (API Key) -->
+        <div id="page3" class="page">
+            <div class="steps">
+                <div class="step done" data-step="0"></div>
+                <div class="step done" data-step="1"></div>
+                <div class="step done" data-step="2"></div>
+                <div class="step active" data-step="3"></div>
+                <div class="step" data-step="4"></div>
+                <div class="step" data-step="5"></div>
+                <div class="step" data-step="6"></div>
+            </div>
+            <p class="step-label">Schritt 2 von 4: Claude AI</p>
+
+            <h1>Claude AI</h1>
+            <p class="subtitle">Anthropic API fuer komplexe Aufgaben</p>
+
+            <div class="info-box">
+                <h3>Claude API Key</h3>
+                <p>
+                    <strong>Claude</strong> ist besonders stark bei:
+                </p>
+                <ul>
+                    <li><strong>Zahlenabgleich</strong> &ndash; Rechnungen pruefen, Betraege vergleichen</li>
+                    <li><strong>Mehrstufige Workflows</strong> &ndash; E-Mail-Verarbeitung, Dokumentenablage</li>
+                    <li><strong>Praezise Textanalyse</strong> &ndash; Vertraege, Angebote, Finanzdaten</li>
+                </ul>
+                <p class="mt-md">
+                    <strong>So gehts:</strong><br>
+                    1. Anthropic Console oeffnen<br>
+                    2. API Key erstellen<br>
+                    3. Key hier einfuegen
+                </p>
+                <p class="mt-md">
+                    <a href="https://console.anthropic.com/settings/keys" target="_blank">
+                        &#x2192; Anthropic Console oeffnen
+                    </a>
+                </p>
+            </div>
+
+            <form id="claudeForm">
+                <div class="form-group">
+                    <label for="claudeKey">Anthropic API Key</label>
+                    <input type="password" id="claudeKey" name="claudeKey"
+                           placeholder="sk-ant-..." autocomplete="off" value="{{ANTHROPIC_API_KEY}}">
+                </div>
+                <button type="submit" class="btn" id="claudeSubmitBtn">
+                    Weiter
+                </button>
+                <button type="button" class="btn-skip" id="skipClaudeBtn">
+                    Ueberspringen
+                </button>
+            </form>
+            <p class="error" id="errorMsg2"></p>
+        </div>
+
+        <!-- Page 3: OpenAI -->
+        <div id="page4" class="page">
+            <div class="steps">
+                <div class="step done" data-step="0"></div>
+                <div class="step done" data-step="1"></div>
+                <div class="step done" data-step="2"></div>
+                <div class="step done" data-step="3"></div>
+                <div class="step active" data-step="4"></div>
+                <div class="step" data-step="5"></div>
+                <div class="step" data-step="6"></div>
+            </div>
+            <p class="step-label">Schritt 3 von 4: OpenAI</p>
+
+            <h1>OpenAI</h1>
+            <p class="subtitle">Fuer Whisper Spracherkennung</p>
+
+            <div class="info-box">
+                <h3>OpenAI API Key</h3>
+                <p>
+                    Wird fuer <strong>Whisper Spracherkennung</strong> (Voice-to-Text) benoetigt.
+                    Optional, wenn du Voice-Features nicht nutzen moechtest.
+                </p>
+                <p class="mt-md">
+                    <strong>So gehts:</strong><br>
+                    1. Bei OpenAI Platform anmelden<br>
+                    2. API Key erstellen<br>
+                    3. Key hier einfuegen
+                </p>
+                <p class="mt-md">
+                    <a href="https://platform.openai.com/api-keys" target="_blank">
+                        &#x2192; OpenAI Platform oeffnen
+                    </a>
+                </p>
+            </div>
+
+            <form id="openaiForm">
+                <div class="form-group">
+                    <label for="openaiKey">OpenAI API Key</label>
+                    <input type="password" id="openaiKey" name="openaiKey"
+                           placeholder="sk-..." autocomplete="off" value="{{OPENAI_API_KEY}}">
+                </div>
+                <button type="submit" class="btn" id="openaiSubmitBtn">
+                    Weiter
+                </button>
+                <button type="button" class="btn-skip" id="skipOpenaiBtn">
+                    Ueberspringen
+                </button>
+            </form>
+            <p class="error" id="errorMsg3"></p>
+        </div>
+
+        <!-- Page 4: Privacy / spaCy Models -->
+        <div id="page5" class="page">
+            <div class="steps">
+                <div class="step done" data-step="0"></div>
+                <div class="step done" data-step="1"></div>
+                <div class="step done" data-step="2"></div>
+                <div class="step done" data-step="3"></div>
+                <div class="step done" data-step="4"></div>
+                <div class="step active" data-step="5"></div>
+                <div class="step" data-step="6"></div>
+            </div>
+            <p class="step-label">Schritt 4 von 4: Datenschutz</p>
+
+            <h1>Datenschutz</h1>
+            <p class="subtitle">Anonymisierung fuer sensible Daten</p>
+
+            <div class="info-box">
+                <p><strong>Warum Sprachmodelle installieren?</strong></p>
+                <p class="mt-sm">
+                    DeskAgent kann personenbezogene Daten (Namen, E-Mails, Adressen) vor dem Senden an AI-Backends anonymisieren.
+                    Dafuer werden deutsche und englische Sprachmodelle benoetigt (~1GB Download).
+                </p>
+            </div>
+
+            <div id="spacy-status-card" class="status-box checking">
+                <div id="spacy-status">
+                    <span class="spinner"></span>
+                    Pruefe installierte Modelle...
+                </div>
+            </div>
+
+            <div id="spacy-install-section" class="button-group">
+                <button onclick="skipSpacy()" class="btn-skip">Ueberspringen</button>
+                <button onclick="installSpacy()" class="btn" id="install-spacy-btn">
+                    Datenschutz-Modelle installieren
+                </button>
+            </div>
+
+            <div id="spacy-progress" class="progress-container" style="display: none;">
+                <div class="progress-bar">
+                    <div id="spacy-progress-bar" class="progress-fill"></div>
+                </div>
+                <p id="spacy-progress-text" class="progress-text">Download wird vorbereitet...</p>
+            </div>
+        </div>
+
+        <!-- Page 5: Completion -->
+        <div id="page6" class="page">
+            <div class="steps">
+                <div class="step done" data-step="0"></div>
+                <div class="step done" data-step="1"></div>
+                <div class="step done" data-step="2"></div>
+                <div class="step done" data-step="3"></div>
+                <div class="step done" data-step="4"></div>
+                <div class="step done" data-step="5"></div>
+                <div class="step active" data-step="6"></div>
+            </div>
+
+            <h1>Setup abgeschlossen!</h1>
+            <p class="subtitle">DeskAgent ist jetzt eingerichtet</p>
+
+            <div class="info-box success">
+                <h3>&#x2713; AI Backends konfiguriert</h3>
+                <div id="configuredBackends"></div>
+            </div>
+
+            <div class="info-box recommended">
+                <h3>&#x1F511; Naechster Schritt: Lizenzschluessel</h3>
+                <p>
+                    Um DeskAgent nutzen zu koennen, trage deinen Lizenzschluessel ein.
+                </p>
+                <p class="mt-md">
+                    Noch keine Lizenz? <a href="{{BRANDING_ORDER_URL}}" target="_blank">&#x2192; Jetzt bestellen</a>
+                </p>
+            </div>
+
+            <button type="button" class="btn" id="finishBtn">
+                Lizenz eintragen
+            </button>
+
+            <p class="skip-hint mt-lg">
+                Die Einstellungen oeffnen sich automatisch im Tab <strong>Lizenz</strong>.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Parse URL parameters for prefill (sandbox testing)
+        const urlParams = new URLSearchParams(window.location.search);
+        const prefill = {
+            license: urlParams.get('license') || '',
+            gemini: urlParams.get('gemini') || '',
+            claude: urlParams.get('claude') || '',
+            openai: urlParams.get('openai') || ''
+        };
+
+        // State
+        const state = {
+            geminiKey: prefill.gemini,
+            claudeKey: prefill.claude,
+            openaiKey: prefill.openai,
+            licenseKey: prefill.license,
+            configuredBackends: [],
+            companyName: '',
+            companyIndustry: '',
+            companyLanguage: 'de',
+            assistantIntro: ''
+        };
+
+        // DOM Elements
+        const pages = {
+            loading: document.getElementById('loadingPage'),
+            page0: document.getElementById('page0'),
+            page1: document.getElementById('page1'),
+            page2: document.getElementById('page2'),
+            page3: document.getElementById('page3'),
+            page4: document.getElementById('page4'),
+            page5: document.getElementById('page5'),
+            page6: document.getElementById('page6')
+        };
+
+        // Track visited pages
+        const visitedPages = new Set();
+
+        // Prefill form fields from URL parameters
+        function prefillFormFields() {
+            if (prefill.gemini) {
+                const geminiInput = document.getElementById('geminiKey');
+                if (geminiInput) geminiInput.value = prefill.gemini;
+            }
+            if (prefill.claude) {
+                const claudeInput = document.getElementById('claudeKey');
+                if (claudeInput) claudeInput.value = prefill.claude;
+            }
+            if (prefill.openai) {
+                const openaiInput = document.getElementById('openaiKey');
+                if (openaiInput) openaiInput.value = prefill.openai;
+            }
+        }
+
+        // Show a specific page and update step indicators
+        function showPage(pageId) {
+            Object.values(pages).forEach(p => p.classList.remove('active'));
+            pages[pageId].classList.add('active');
+
+            // Mark current page as visited
+            visitedPages.add(pageId);
+
+            // Get current page number (0-5)
+            const currentStep = parseInt(pageId.replace('page', '')) || 0;
+
+            // Update all step indicators on all pages
+            document.querySelectorAll('.steps').forEach(stepsContainer => {
+                stepsContainer.querySelectorAll('.step').forEach(step => {
+                    const stepNum = parseInt(step.dataset.step);
+                    step.classList.remove('active', 'done');
+
+                    if (stepNum === currentStep) {
+                        step.classList.add('active');
+                    } else if (visitedPages.has('page' + stepNum)) {
+                        step.classList.add('done');
+                    }
+                });
+            });
+
+            // Check spaCy models when entering page5
+            if (pageId === 'page5') {
+                checkSpacyModels();
+            }
+        }
+
+        // Initialize on load - show welcome page first
+        showPage('page0');
+
+        // Prefill form fields from URL parameters (for sandbox testing)
+        prefillFormFields();
+
+        // Page 0: License acceptance checkbox
+        document.getElementById('acceptLicense').addEventListener('change', (e) => {
+            document.getElementById('acceptBtn').disabled = !e.target.checked;
+        });
+
+        // Page 0: Accept and continue - go to branding page
+        document.getElementById('acceptBtn').addEventListener('click', () => {
+            showPage('page1');
+        });
+
+        // Page 1: Branding - Next
+        document.getElementById('brandingNextBtn').addEventListener('click', () => {
+            state.companyName = document.getElementById('companyName').value.trim();
+            state.companyIndustry = document.getElementById('companyIndustry').value.trim();
+            state.companyLanguage = document.getElementById('companyLanguage').value;
+            state.assistantIntro = document.getElementById('assistantIntro').value.trim();
+            showPage('page2');
+        });
+
+        // Page 1: Branding - Skip
+        document.getElementById('brandingSkipBtn').addEventListener('click', () => {
+            showPage('page2');
+        });
+
+        // Page 2: Gemini form submit
+        document.getElementById('geminiForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const key = document.getElementById('geminiKey').value.trim();
+
+            if (key && !key.startsWith('AIza')) {
+                document.getElementById('errorMsg1').textContent = 'Der API-Key sollte mit "AIza" beginnen.';
+                document.getElementById('errorMsg1').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('errorMsg1').style.display = 'none';
+            state.geminiKey = key;
+            showPage('page3');
+        });
+
+        // Page 2: Skip Gemini
+        document.getElementById('skipGeminiBtn').addEventListener('click', () => {
+            state.geminiKey = '';
+            showPage('page3');
+        });
+
+        // Page 3: Claude form submit
+        document.getElementById('claudeForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const key = document.getElementById('claudeKey').value.trim();
+
+            if (key && !key.startsWith('sk-ant-')) {
+                document.getElementById('errorMsg2').textContent = 'Der API-Key sollte mit "sk-ant-" beginnen.';
+                document.getElementById('errorMsg2').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('errorMsg2').style.display = 'none';
+            state.claudeKey = key;
+            showPage('page4');
+        });
+
+        // Page 3: Skip Claude
+        document.getElementById('skipClaudeBtn').addEventListener('click', () => {
+            state.claudeKey = '';
+            showPage('page4');
+        });
+
+        // Page 4: OpenAI form submit (final)
+        document.getElementById('openaiForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const key = document.getElementById('openaiKey').value.trim();
+
+            if (key && !key.startsWith('sk-')) {
+                document.getElementById('errorMsg3').textContent = 'Der API-Key sollte mit "sk-" beginnen.';
+                document.getElementById('errorMsg3').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('errorMsg3').style.display = 'none';
+            state.openaiKey = key;
+            await submitSetup();
+        });
+
+        // Page 4: Skip OpenAI (submit without key)
+        document.getElementById('skipOpenaiBtn').addEventListener('click', async () => {
+            state.openaiKey = '';
+            await submitSetup();
+        });
+
+        // Submit all collected data
+        async function submitSetup() {
+            const submitBtn = document.getElementById('openaiSubmitBtn');
+            const skipBtn = document.getElementById('skipOpenaiBtn');
+            submitBtn.disabled = true;
+            skipBtn.disabled = true;
+            submitBtn.textContent = 'Speichere...';
+
+            try {
+                // Check if any backends were configured
+                const hasAnyBackend = state.geminiKey || state.claudeKey || state.openaiKey;
+
+                const response = await fetch('/api/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        skip: !hasAnyBackend,
+                        anthropic_api_key: state.claudeKey,
+                        gemini_api_key: state.geminiKey,
+                        openai_api_key: state.openaiKey,
+                        company_name: state.companyName,
+                        industry: state.companyIndustry,
+                        language: state.companyLanguage,
+                        assistant_intro: state.assistantIntro
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Store backend summary for later display
+                    state.configuredBackends = [];
+                    if (state.geminiKey) state.configuredBackends.push('Gemini');
+                    if (state.claudeKey) state.configuredBackends.push('Claude');
+                    if (state.openaiKey) state.configuredBackends.push('OpenAI');
+
+                    // Skip spaCy page - models are pre-installed in installer
+                    showCompletionPage();
+                } else {
+                    document.getElementById('errorMsg3').textContent = result.error || 'Fehler beim Speichern.';
+                    document.getElementById('errorMsg3').style.display = 'block';
+                    submitBtn.disabled = false;
+                    skipBtn.disabled = false;
+                    submitBtn.textContent = 'Fertig';
+                }
+            } catch (err) {
+                document.getElementById('errorMsg3').textContent = 'Verbindungsfehler: ' + err.message;
+                document.getElementById('errorMsg3').style.display = 'block';
+                submitBtn.disabled = false;
+                skipBtn.disabled = false;
+                submitBtn.textContent = 'Fertig';
+            }
+        }
+
+        // Show completion page with summary
+        function showCompletionPage() {
+            const summaryEl = document.getElementById('configuredBackends');
+            const configuredList = state.configuredBackends || [];
+
+            if (configuredList.length > 0) {
+                summaryEl.innerHTML = '<strong>Konfiguriert:</strong> ' + configuredList.join(', ');
+            } else {
+                summaryEl.innerHTML = '<em>Keine Backends konfiguriert. Du kannst diese spaeter in <code>config/backends.json</code> hinzufuegen.</em>';
+            }
+
+            showPage('page6');
+        }
+
+        // spaCy / Privacy Functions
+        async function checkSpacyModels() {
+            const statusEl = document.getElementById('spacy-status');
+            const statusCard = document.getElementById('spacy-status-card');
+            const installBtn = document.getElementById('install-spacy-btn');
+            const installSection = document.getElementById('spacy-install-section');
+
+            try {
+                const response = await fetch('/api/setup/check-spacy');
+                const data = await response.json();
+
+                if (data.missing.length === 0) {
+                    statusEl.innerHTML = '&#x2713; Datenschutz-Modelle bereits installiert';
+                    statusCard.classList.remove('checking');
+                    statusCard.classList.add('success');
+                    installBtn.textContent = 'Weiter';
+                    installBtn.onclick = () => showCompletionPage();
+                } else {
+                    statusEl.innerHTML = '&#x26A0; Modelle nicht installiert: ' + data.missing.join(', ');
+                    statusCard.classList.remove('checking');
+                    statusCard.classList.add('warning');
+                }
+            } catch (e) {
+                statusEl.innerHTML = 'Modellstatus konnte nicht geprueft werden';
+                statusCard.classList.remove('checking');
+                statusCard.classList.add('error');
+            }
+        }
+
+        async function installSpacy() {
+            const progressDiv = document.getElementById('spacy-progress');
+            const progressBar = document.getElementById('spacy-progress-bar');
+            const progressText = document.getElementById('spacy-progress-text');
+            const installBtn = document.getElementById('install-spacy-btn');
+            const installSection = document.getElementById('spacy-install-section');
+
+            installSection.style.display = 'none';
+            progressDiv.style.display = 'block';
+            progressBar.style.width = '10%';
+            progressText.textContent = 'Sprachmodelle werden heruntergeladen (kann einige Minuten dauern)...';
+
+            try {
+                // Simulate progress while waiting
+                let progress = 10;
+                const progressInterval = setInterval(() => {
+                    if (progress < 90) {
+                        progress += Math.random() * 5;
+                        progressBar.style.width = Math.min(progress, 90) + '%';
+                    }
+                }, 1000);
+
+                const response = await fetch('/api/setup/install-spacy', { method: 'POST' });
+                const data = await response.json();
+
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+
+                const allSuccess = data.results.every(r => r.success);
+                if (allSuccess) {
+                    progressText.innerHTML = '<span style="color: var(--success-text);">&#x2713; Modelle erfolgreich installiert!</span>';
+                    setTimeout(() => showCompletionPage(), 1500);
+                } else {
+                    const failed = data.results.filter(r => !r.success);
+                    const failedNames = failed.map(r => r.model).join(', ');
+                    const firstError = failed[0]?.error || 'Unbekannter Fehler';
+                    progressText.innerHTML = '<span style="color: var(--warning-text);">&#x26A0; Modelle fehlgeschlagen: ' + failedNames + '</span><br><small style="color: var(--text-muted);">' + firstError + '</small><br><small>Du kannst diese spaeter manuell installieren.</small>';
+                    installSection.style.display = 'flex';
+                    installBtn.textContent = 'Trotzdem weiter';
+                    installBtn.onclick = () => showCompletionPage();
+                }
+            } catch (e) {
+                progressText.innerHTML = '<span style="color: var(--error-text);">Installation fehlgeschlagen: ' + e.message + '</span>';
+                installSection.style.display = 'flex';
+                installBtn.textContent = 'Trotzdem weiter';
+                installBtn.onclick = () => showCompletionPage();
+            }
+        }
+
+        function skipSpacy() {
+            showCompletionPage();
+        }
+
+        // Page 5: Finish button - opens settings with License tab
+        document.getElementById('finishBtn').addEventListener('click', () => {
+            sessionStorage.setItem('setupWizardCompleted', 'true');
+            // Navigate to main page with parameter to open settings
+            window.location.href = '/?openSettings=license';
+        });
+
+        // Make done steps clickable for navigation
+        document.querySelectorAll('.step').forEach(step => {
+            step.addEventListener('click', () => {
+                if (step.classList.contains('done')) {
+                    const targetStep = step.dataset.step;
+                    showPage('page' + targetStep);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

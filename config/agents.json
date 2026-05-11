@@ -1,0 +1,34 @@
+{
+  "categories": {
+    "chat": {
+      "label": "Chat",
+      "icon": "chat",
+      "order": 0
+    },
+    "kommunikation": {
+      "label": "Kommunikation",
+      "icon": "forum",
+      "order": 1
+    },
+    "finance": {
+      "label": "Finanzen",
+      "icon": "account_balance",
+      "order": 2
+    },
+    "sales": {
+      "label": "Vertrieb & Marketing",
+      "icon": "storefront",
+      "order": 3
+    },
+    "system": {
+      "label": "System",
+      "icon": "smart_toy",
+      "order": 4
+    },
+    "beta": {
+      "label": "Beta",
+      "icon": "science",
+      "order": 90
+    }
+  }
+}

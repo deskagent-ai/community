@@ -1,0 +1,49 @@
+# DeskAgent - AGPL-3.0 / Community Edition
+#
+# This pyproject.toml declares OPTIONAL dependencies that are NOT installed
+# by `pip install -r requirements.txt`. They are activated via extras:
+#
+#     pip install "deskagent[anonymizer]"   # GDPR PII anonymization (Presidio + spaCy ~500MB)
+#     pip install "deskagent[claude-sdk]"   # Claude Agent SDK (bundles proprietary claude binary)
+#     pip install "deskagent[all]"          # All optional features
+#
+# Why optional?
+# - Presidio + spaCy require 500MB+ of language models that the typical
+#   Community user doesn't need by default.
+# - claude-agent-sdk bundles a proprietary `claude` binary under Anthropic
+#   Commercial Terms; it cannot be a hard requirement of an AGPL-3.0
+#   project.
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deskagent"
+version = "0.0.0"
+description = "DeskAgent - Your Desktop. Your Agent. (AGPL-3.0 Community Edition)"
+license = "AGPL-3.0-or-later"
+readme = "README.md"
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+# GDPR / PII anonymization via Microsoft Presidio + spaCy.
+# Adds ~500MB of NLP language models on top of the base install.
+anonymizer = [
+    "presidio-analyzer>=2.2.0",
+    "presidio-anonymizer>=2.2.0",
+    "spacy>=3.7",
+]
+
+# Claude Agent SDK - bundles a proprietary `claude` binary under Anthropic
+# Commercial Terms. Optional because an AGPL-3.0 project cannot hard-depend
+# on a proprietary download. Use Claude API (`claude_api` backend) for a
+# fully-OSS alternative.
+claude-sdk = [
+    "claude-agent-sdk>=0.1.27",
+]
+
+# All optional features.
+all = [
+    "deskagent[anonymizer,claude-sdk]",
+]

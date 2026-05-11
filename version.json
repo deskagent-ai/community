@@ -1,0 +1,8 @@
+{
+    "version":  "1.0.12",
+    "build":  1,
+    "release_date":  "2026-03-22",
+    "config_schema":  "1.0",
+    "min_python":  "3.10",
+    "installer_version":  "1.0.0"
+}

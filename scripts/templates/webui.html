@@ -1,0 +1,1834 @@
+<!DOCTYPE html>
+<html lang="{{LANGUAGE}}" data-theme="{{THEME}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{APP_TITLE}}</title>
+    <link rel="icon" type="image/png" href="/static/icons/favicon-96x96.png" sizes="96x96">
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <script>
+        // JSON syntax highlighting helper
+        function highlightJson(json) {
+            // Basic JSON syntax highlighting
+            return json
+                .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?)/g, function(match) {
+                    if (/:$/.test(match)) {
+                        return '<span class="json-key">' + match.replace(/:$/, '') + '</span>:';
+                    }
+                    return '<span class="json-string">' + match + '</span>';
+                })
+                .replace(/\b(true|false)\b/g, '<span class="json-bool">$1</span>')
+                .replace(/\b(null)\b/g, '<span class="json-null">$1</span>')
+                .replace(/\b(-?\d+\.?\d*)\b/g, '<span class="json-number">$1</span>');
+        }
+
+        // Unique ID generator for collapsible blocks
+        let jsonBlockId = 0;
+
+        // Configure marked.js for GFM tables and other extensions
+        marked.use({
+            gfm: true,
+            breaks: true,
+            renderer: {
+                code(code, language) {
+                    // Handle object parameter format (newer marked.js versions)
+                    if (typeof code === 'object') {
+                        const token = code;
+                        code = token.text;
+                        language = token.lang;
+                    }
+
+                    const escaped = code
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;');
+
+                    // Check if this is JSON content
+                    const isJson = language === 'json' || (!language && /^\s*[\[{]/.test(code.trim()));
+                    const lineCount = code.split('\n').length;
+                    const isLarge = lineCount > 10;
+
+                    if (isJson) {
+                        const id = 'json-block-' + (++jsonBlockId);
+                        const highlighted = highlightJson(escaped);
+                        const collapsed = isLarge ? ' collapsed' : '';
+                        const expandText = isLarge ? `<span class="json-line-count">${lineCount} Zeilen</span>` : '';
+
+                        return `<div class="json-block${collapsed}">
+                            <div class="json-header">
+                                <span class="json-label">JSON${expandText}</span>
+                                ${isLarge ? `<button class="json-toggle" onclick="toggleJsonBlock('${id}')" title="Aus-/Einklappen"><span class="material-icons">unfold_more</span></button>` : ''}
+                            </div>
+                            <pre class="json-content" id="${id}"><code>${highlighted}</code></pre>
+                        </div>`;
+                    }
+
+                    // Regular code block
+                    const langClass = language ? ` language-${language}` : '';
+                    return `<pre><code class="${langClass}">${escaped}</code></pre>`;
+                },
+                link(href, title, text) {
+                    // Handle object parameter format (newer marked.js versions)
+                    if (typeof href === 'object') {
+                        const token = href;
+                        href = token.href;
+                        title = token.title;
+                        text = token.text;
+                    }
+                    // Open external links in new tab
+                    if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
+                        const titleAttr = title ? ` title="${title}"` : '';
+                        return `<a href="${href}" target="_blank" rel="noopener noreferrer"${titleAttr}>${text}</a>`;
+                    }
+                    // Default link rendering
+                    const titleAttr = title ? ` title="${title}"` : '';
+                    return `<a href="${href}"${titleAttr}>${text}</a>`;
+                }
+            }
+        });
+
+        // Toggle JSON block expand/collapse
+        function toggleJsonBlock(id) {
+            const block = document.getElementById(id).closest('.json-block');
+            const btn = block.querySelector('.json-toggle .material-icons');
+            block.classList.toggle('collapsed');
+            btn.textContent = block.classList.contains('collapsed') ? 'unfold_more' : 'unfold_less';
+        }
+
+        // ========== Apache ECharts Integration ==========
+        // Store chart instances for cleanup on re-render
+        const chartInstances = {};
+
+        // Simple hash function for stable chart IDs
+        function hashChartConfig(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return 'chart-' + Math.abs(hash).toString(36);
+        }
+
+        // Apply theme-aware colors to ECharts option
+        function applyChartTheme(option) {
+            const isDark = document.body.classList.contains('dark-theme') ||
+                           document.documentElement.getAttribute('data-theme') === 'dark';
+            const textColor = isDark ? '#e0e0e0' : '#343541';
+            const backgroundColor = isDark ? 'transparent' : 'transparent';
+
+            // Set global text color
+            option.textStyle = option.textStyle || {};
+            option.textStyle.color = textColor;
+
+            // Set background (transparent to match theme)
+            option.backgroundColor = backgroundColor;
+
+            // Title: position at top with padding
+            if (option.title) {
+                option.title.textStyle = option.title.textStyle || {};
+                option.title.textStyle.color = textColor;
+                option.title.top = option.title.top || 10;
+            }
+
+            // Legend: position below title to avoid overlap
+            if (option.legend) {
+                option.legend.textStyle = option.legend.textStyle || {};
+                option.legend.textStyle.color = textColor;
+                // Position legend below title (default top=50 gives space for title)
+                if (option.legend.top === undefined && option.legend.bottom === undefined) {
+                    option.legend.top = 40;
+                }
+            }
+
+            // Axis colors (for bar, line charts)
+            if (option.xAxis) {
+                const axes = Array.isArray(option.xAxis) ? option.xAxis : [option.xAxis];
+                axes.forEach(axis => {
+                    axis.axisLine = axis.axisLine || {};
+                    axis.axisLine.lineStyle = { color: textColor };
+                    axis.axisLabel = axis.axisLabel || {};
+                    axis.axisLabel.color = textColor;
+                });
+            }
+            if (option.yAxis) {
+                const axes = Array.isArray(option.yAxis) ? option.yAxis : [option.yAxis];
+                axes.forEach(axis => {
+                    axis.axisLine = axis.axisLine || {};
+                    axis.axisLine.lineStyle = { color: textColor };
+                    axis.axisLabel = axis.axisLabel || {};
+                    axis.axisLabel.color = textColor;
+                });
+            }
+
+            // Toolbox colors (export buttons)
+            if (option.toolbox) {
+                option.toolbox.iconStyle = option.toolbox.iconStyle || {};
+                option.toolbox.iconStyle.borderColor = textColor;
+            }
+        }
+
+        // Initialize a chart on a div element
+        function initializeChart(id, optionJson) {
+            requestAnimationFrame(() => {
+                setTimeout(() => tryInitChart(id, optionJson), 50);
+            });
+        }
+
+        // Actually try to create the chart
+        function tryInitChart(id, optionJson, retryCount = 0) {
+            const container = document.getElementById(id);
+            if (!container) {
+                // Container not in DOM yet, retry up to 5 times
+                if (retryCount < 5) {
+                    setTimeout(() => tryInitChart(id, optionJson, retryCount + 1), 100);
+                }
+                return;
+            }
+
+            // Check if chart already exists
+            if (chartInstances[id]) {
+                try {
+                    const oldDom = chartInstances[id].getDom();
+                    // Check if old DOM is still the same element AND in the document
+                    if (oldDom === container && document.contains(oldDom)) {
+                        return; // Already initialized on this container, skip
+                    }
+                    // Container was replaced or removed, dispose old instance
+                    chartInstances[id].dispose();
+                    delete chartInstances[id];
+                } catch (e) {
+                    // Instance invalid, clean up
+                    delete chartInstances[id];
+                }
+            }
+
+            // Parse option and create chart
+            try {
+                const option = JSON.parse(optionJson);
+                applyChartTheme(option);
+
+                // Initialize ECharts instance
+                console.log('[Chart] Initializing ECharts for:', id);
+                const chart = echarts.init(container);
+                chart.setOption(option);
+                chartInstances[id] = chart;
+
+                console.log('[Chart] Initialized:', id);
+            } catch (e) {
+                console.error('[Chart] Error creating chart:', e);
+                if (container.parentElement) {
+                    container.parentElement.innerHTML = `<div class="chart-error">Chart error: ${e.message}</div>`;
+                }
+            }
+        }
+
+        // Re-initialize all charts from data attributes (call after major DOM updates)
+        function reinitializeCharts() {
+            document.querySelectorAll('.chart-container div[data-chart-option]').forEach(container => {
+                const id = container.id;
+                const optionJson = container.dataset.chartOption;
+                if (!id || !optionJson) return;
+
+                // Check if chart needs (re-)initialization
+                const existingInstance = chartInstances[id];
+                if (existingInstance) {
+                    try {
+                        // Check if instance's DOM is still this element and in DOM
+                        if (existingInstance.getDom() === container && document.contains(container)) {
+                            return; // All good, skip
+                        }
+                    } catch (e) {
+                        // Instance is broken
+                    }
+                }
+                // Initialize or re-initialize
+                tryInitChart(id, optionJson);
+            });
+        }
+
+        // Toggle fullscreen for a chart
+        function downloadChart(chartId) {
+            const chart = chartInstances[chartId];
+            if (!chart) return;
+            const url = chart.getDataURL({ type: 'png', pixelRatio: 2 });
+            const link = document.createElement('a');
+            link.download = 'chart.png';
+            link.href = url;
+            link.click();
+        }
+
+        function toggleChartFullscreen(chartId) {
+            const container = document.getElementById(chartId);
+            if (!container) return;
+            const wrapper = container.closest('.chart-container');
+            if (!wrapper) return;
+            const btn = wrapper.querySelector('.chart-fullscreen-btn .material-icons');
+
+            if (wrapper.classList.contains('chart-fullscreen')) {
+                // Exit fullscreen
+                wrapper.classList.remove('chart-fullscreen');
+                document.body.style.overflow = '';
+                if (btn) btn.textContent = 'fullscreen';
+                // Resize chart after transition
+                setTimeout(() => {
+                    if (chartInstances[chartId]) {
+                        chartInstances[chartId].resize();
+                    }
+                }, 310);
+            } else {
+                // Enter fullscreen
+                wrapper.classList.add('chart-fullscreen');
+                document.body.style.overflow = 'hidden';
+                if (btn) btn.textContent = 'fullscreen_exit';
+                // Resize chart after transition
+                setTimeout(() => {
+                    if (chartInstances[chartId]) {
+                        chartInstances[chartId].resize();
+                    }
+                }, 310);
+            }
+        }
+
+        // Handle ESC key to exit chart fullscreen
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const fullscreenChart = document.querySelector('.chart-container.chart-fullscreen');
+                if (fullscreenChart) {
+                    const chartDiv = fullscreenChart.querySelector('div[id^="chart-"]');
+                    if (chartDiv) toggleChartFullscreen(chartDiv.id);
+                }
+            }
+        });
+
+        // Render a chart marker into HTML
+        function renderChartMarker(optionJson) {
+            console.log('[Chart] renderChartMarker called, JSON preview:', optionJson.substring(0, 80));
+            try {
+                // Use stable ID based on option hash
+                const id = hashChartConfig(optionJson);
+
+                // Check if this exact chart already exists in DOM
+                const existingContainer = document.getElementById(id);
+                if (existingContainer && chartInstances[id]) {
+                    // Chart already exists, return same HTML structure
+                    return `<div class="chart-container">
+                        <div class="chart-header">
+                            <div class="chart-actions">
+                                <button class="chart-fullscreen-btn" onclick="toggleChartFullscreen('${id}')" title="Fullscreen">
+                                    <span class="material-icons">fullscreen</span>
+                                </button>
+                                <button class="chart-download-btn" onclick="downloadChart('${id}')" title="Download PNG">
+                                    <span class="material-icons">download</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="${id}" data-chart-option="${optionJson.replace(/"/g, '&quot;')}" style="width: 100%; height: 400px;"></div>
+                    </div>`;
+                }
+
+                // Schedule chart initialization after DOM insertion
+                initializeChart(id, optionJson);
+
+                // Return container HTML with option in data attribute for re-initialization
+                return `<div class="chart-container">
+                    <div class="chart-header">
+                        <div class="chart-actions">
+                            <button class="chart-fullscreen-btn" onclick="toggleChartFullscreen('${id}')" title="Fullscreen">
+                                <span class="material-icons">fullscreen</span>
+                            </button>
+                            <button class="chart-download-btn" onclick="downloadChart('${id}')" title="Download PNG">
+                                <span class="material-icons">download</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="${id}" data-chart-option="${optionJson.replace(/"/g, '&quot;')}" style="width: 100%; height: 400px;"></div>
+                </div>`;
+            } catch (e) {
+                console.error('[Chart] Parse error:', e);
+                return `<div class="chart-error">Chart error: ${e.message}</div>`;
+            }
+        }
+
+        // Storage for chart configs extracted before marked.js processing
+        const chartStorage = {};
+        let chartPlaceholderId = 0;
+
+        // Extract JSON with balanced braces starting at position
+        function extractBalancedJson(str, startPos) {
+            if (str[startPos] !== '{') return null;
+            let depth = 0;
+            let inString = false;
+            let escape = false;
+            for (let i = startPos; i < str.length; i++) {
+                const c = str[i];
+                if (escape) { escape = false; continue; }
+                if (c === '\\' && inString) { escape = true; continue; }
+                if (c === '"' && !escape) { inString = !inString; continue; }
+                if (inString) continue;
+                if (c === '{') depth++;
+                if (c === '}') depth--;
+                if (depth === 0) return str.substring(startPos, i + 1);
+            }
+            return null;
+        }
+
+        // PRE-PROCESS: Extract [CHART:...] BEFORE marked.js (to avoid escaping)
+        // Returns text with placeholders, stores JSON configs in chartStorage
+        function preProcessChartMarkers(text) {
+            const marker = '[CHART:';
+            let result = '';
+            let lastIndex = 0;
+            let pos = text.indexOf(marker);
+
+            // Debug: Log if we find chart markers
+            if (pos !== -1) {
+                console.log('[Chart] Found chart marker at position:', pos);
+                console.log('[Chart] Text preview:', text.substring(pos, pos + 100));
+            }
+
+            while (pos !== -1) {
+                result += text.substring(lastIndex, pos);
+                const jsonStart = pos + marker.length;
+                const json = extractBalancedJson(text, jsonStart);
+                if (json) {
+                    // Check for end marker: either ']' (old) or '[/CHART]]' (new)
+                    const afterJson = text.substring(jsonStart + json.length);
+                    let skipLen = 0;
+                    if (afterJson.startsWith('[/CHART]]')) {
+                        skipLen = 9; // [/CHART]]
+                    } else if (afterJson.startsWith(']')) {
+                        skipLen = 1; // ]
+                    }
+                    if (skipLen > 0) {
+                        // Store JSON and insert placeholder (no underscores - markdown interprets them!)
+                        const placeholderId = 'DACHARTPLACEHOLDER' + (++chartPlaceholderId) + 'END';
+                        chartStorage[placeholderId] = json;
+                        result += placeholderId;
+                        lastIndex = jsonStart + json.length + skipLen;
+                        console.log('[Chart] Extracted chart, placeholder:', placeholderId);
+                        console.log('[Chart] JSON length:', json.length);
+                    } else {
+                        // Malformed marker, keep as-is
+                        result += marker;
+                        lastIndex = jsonStart;
+                    }
+                } else {
+                    // Malformed marker, keep as-is
+                    result += marker;
+                    lastIndex = jsonStart;
+                }
+                pos = text.indexOf(marker, lastIndex);
+            }
+            result += text.substring(lastIndex);
+            return result;
+        }
+
+        // POST-PROCESS: Replace placeholders with rendered charts AFTER marked.js
+        function postProcessChartMarkers(html) {
+            for (const [placeholder, json] of Object.entries(chartStorage)) {
+                if (html.includes(placeholder)) {
+                    html = html.replace(placeholder, renderChartMarker(json));
+                    delete chartStorage[placeholder]; // Clean up
+                }
+            }
+            return html;
+        }
+
+        // Legacy function for backward compatibility
+        function processChartMarkers(html) {
+            return postProcessChartMarkers(html);
+        }
+
+        /**
+         * Central markdown rendering with chart support.
+         * Use this instead of calling marked.parse() directly.
+         * @param {string} content - Raw markdown content (may contain [CHART:...])
+         * @param {boolean} formatTools - Whether to format tool calls as badges (default: true)
+         * @returns {string} - Rendered HTML with charts
+         */
+        function renderMarkdownWithCharts(content, formatTools = true) {
+            if (!content) return '';
+            try {
+                let formatted = content;
+                // Format tool calls as badges
+                if (formatTools && typeof formatToolCalls === 'function') {
+                    formatted = formatToolCalls(formatted);
+                }
+                // PRE-process: Extract chart markers before marked.js escapes them
+                formatted = preProcessChartMarkers(formatted);
+                // Render markdown
+                let html = (typeof marked !== 'undefined' && marked.parse)
+                    ? marked.parse(formatted)
+                    : formatted.replace(/\n/g, '<br>');
+                // POST-process: Resolve URL-encoded link placeholders in href attributes
+                // (Markdown renders {{LINK:...}} which browser encodes to %7B%7BLINK:...%7D%7D)
+                if (typeof resolveLinkPlaceholders === 'function') {
+                    html = resolveLinkPlaceholders(html);
+                }
+                // POST-process: Replace chart placeholders with rendered charts
+                html = postProcessChartMarkers(html);
+                return html;
+            } catch (e) {
+                console.error('[renderMarkdownWithCharts] Error:', e);
+                return content.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+            }
+        }
+
+        // MutationObserver to auto-initialize charts when DOM changes
+        // This handles cases where innerHTML replaces chart containers
+        const chartObserver = new MutationObserver((mutations) => {
+            let hasNewCharts = false;
+            for (const mutation of mutations) {
+                if (mutation.type === 'childList') {
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType === 1) { // Element node
+                            // Check if node is a chart container or contains one
+                            if (node.matches?.('div[data-chart-option]') ||
+                                node.querySelector?.('div[data-chart-option]')) {
+                                hasNewCharts = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (hasNewCharts) break;
+            }
+            if (hasNewCharts) {
+                // Debounce: wait for DOM to settle
+                clearTimeout(chartObserver._timeout);
+                chartObserver._timeout = setTimeout(reinitializeCharts, 100);
+            }
+        });
+
+        // Start observing when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            const contentArea = document.querySelector('.chat-content, .result-content, #mainContent');
+            if (contentArea) {
+                chartObserver.observe(contentArea, { childList: true, subtree: true });
+            } else {
+                // Fallback: observe body
+                chartObserver.observe(document.body, { childList: true, subtree: true });
+            }
+        });
+    </script>
+    <script>
+        // Config from agents.json (for Ctrl+Click edit feature)
+        const EDIT_AGENT = '{{EDIT_AGENT}}';
+        // Browser logging level: "minimal" | "normal" | "verbose"
+        const BROWSER_LOG_LEVEL = '{{BROWSER_LOG_LEVEL}}';
+    </script>
+    <script>
+        // Language and translations (i18n)
+        const LANG = '{{LANGUAGE}}';
+        const T = {{TRANSLATIONS}};
+        // UI state from preferences
+        const HISTORY_PINNED = {{HISTORY_PINNED}};
+    </script>
+    <script src="/static/js/webui-utils.js"></script>
+    <script src="/static/js/webui-core.js"></script>
+    <link rel="stylesheet" href="/static/fonts/fonts.css">
+    <link rel="stylesheet" href="/styles/main.css">
+    <style>
+        :root {
+            --accent-color: {{ACCENT_COLOR}};
+            --accent-hover: color-mix(in srgb, {{ACCENT_COLOR}} 85%, black);
+            --accent-light: color-mix(in srgb, {{ACCENT_COLOR}} 15%, white);
+        }
+    </style>
+</head>
+<body class="{{SIMPLE_MODE_CLASS}}">
+    <!-- Register Service Worker for offline support -->
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+    </script>
+
+    <!-- Startup Loading Overlay -->
+    <div id="startupOverlay" class="startup-overlay">
+        <div class="startup-card">
+            <div class="startup-spinner"></div>
+            <div class="startup-title">DeskAgent</div>
+            <div class="startup-status">Connecting...</div>
+        </div>
+    </div>
+
+    <!-- Hamburger Menu Backdrop -->
+    <div class="hamburger-backdrop" id="hamburgerBackdrop" onclick="closeHamburgerMenu()"></div>
+
+    <!-- Hamburger Menu (Mobile Only) -->
+    <nav class="hamburger-menu" id="hamburgerMenu">
+        <div class="hamburger-header">
+            <button class="hamburger-close-btn" onclick="closeHamburgerMenu()">
+                <span class="material-icons">close</span>
+            </button>
+            <h3>Menu</h3>
+        </div>
+        <div class="hamburger-items">
+            <!-- Category Filter -->
+            <div class="hamburger-section-label" data-i18n="hamburger.filter">Filter</div>
+            <div class="hamburger-item" id="hamburgerCategory" onclick="toggleHamburgerCategoryMenu()">
+                <span class="material-icons" id="hamburgerCategoryIcon">apps</span>
+                <span class="hamburger-item-label" data-i18n="hamburger.category">Kategorie</span>
+                <span class="hamburger-item-value" id="hamburgerCategoryValue" data-i18n="hamburger.all">Alle</span>
+                <span class="material-icons hamburger-arrow">chevron_right</span>
+            </div>
+            <!-- Category submenu -->
+            <div class="hamburger-submenu" id="hamburgerCategoryMenu">
+                <div class="hamburger-subitem active" data-category="all" onclick="filterByCategory('all'); closeHamburgerMenu();">
+                    <span class="material-icons">apps</span>
+                    <span data-i18n="hamburger.all">Alle</span>
+                </div>
+                {{HAMBURGER_CATEGORY_ITEMS}}
+            </div>
+
+            <!-- Content Mode (Both toggle) -->
+            <div class="hamburger-item {{CONTENT_MODE_HIDDEN}}" id="hamburgerContentMode" onclick="toggleHamburgerContentModeMenu()">
+                <span class="material-icons">tune</span>
+                <span class="hamburger-item-label">Content</span>
+                <span class="hamburger-item-value" id="hamburgerContentModeValue">{{CONTENT_MODE_LABEL}}</span>
+                <span class="material-icons hamburger-arrow">chevron_right</span>
+            </div>
+            <!-- Content mode submenu -->
+            <div class="hamburger-submenu" id="hamburgerContentModeMenu">
+                <div class="hamburger-subitem {{CUSTOM_ACTIVE}}" onclick="setContentMode('custom'); closeHamburgerMenu();">
+                    <span>Custom</span>
+                </div>
+                <div class="hamburger-subitem {{BOTH_ACTIVE}}" onclick="setContentMode('both'); closeHamburgerMenu();">
+                    <span>Both</span>
+                </div>
+                <div class="hamburger-subitem {{STANDARD_ACTIVE}}" onclick="setContentMode('standard'); closeHamburgerMenu();">
+                    <span>Standard</span>
+                </div>
+            </div>
+
+            <!-- Demo Mode -->
+            <div class="hamburger-item" id="hamburgerDemo" onclick="toggleDemoMode(); closeHamburgerMenu();" style="display: none;">
+                <span class="material-icons">science</span>
+                <span class="hamburger-item-label">Demo</span>
+                <span class="hamburger-item-value" id="hamburgerDemoValue">Off</span>
+            </div>
+
+            <div class="hamburger-divider"></div>
+
+            <!-- Actions -->
+            <div class="hamburger-section-label" data-i18n="hamburger.actions">Aktionen</div>
+            <div class="hamburger-item" onclick="openHistoryPanel(); closeHamburgerMenu();">
+                <span class="material-icons">history</span>
+                <span class="hamburger-item-label">History</span>
+            </div>
+            <div class="hamburger-item" onclick="openSettings(); closeHamburgerMenu();">
+                <span class="material-icons">settings</span>
+                <span class="hamburger-item-label" data-i18n="hamburger.settings">Einstellungen</span>
+            </div>
+            <div class="hamburger-item" onclick="toggleSimpleMode(); closeHamburgerMenu();">
+                <span class="material-icons" id="hamburgerModeIcon">{{SIMPLE_MODE_ICON}}</span>
+                <span class="hamburger-item-label" id="hamburgerModeLabel">{{SIMPLE_MODE_LABEL}}</span>
+            </div>
+
+            <div class="hamburger-divider"></div>
+
+            <!-- Status -->
+            <div class="hamburger-section-label" data-i18n="hamburger.status">Status</div>
+            <div class="hamburger-item" id="hamburgerAnon" onclick="showAnonDetails(); closeHamburgerMenu();">
+                <span class="material-icons" id="hamburgerAnonIcon">{{ANON_ICON}}</span>
+                <span class="hamburger-item-label">{{ANON_TEXT}}</span>
+            </div>
+            <div class="hamburger-item" id="hamburgerCost" onclick="resetTotalCost(); closeHamburgerMenu();">
+                <span class="material-icons">payments</span>
+                <span class="hamburger-item-label">API Kosten</span>
+                <span class="hamburger-item-value" id="hamburgerCostValue">$0.00</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-left">
+            <a href="{{BRANDING_DOC_URL}}" target="_blank" class="logo-link" title="DeskAgent {{VERSION}} · {{BRANDING_COPYRIGHT}}">
+                <img src="/static/icons/logowide.svg" alt="DeskAgent" class="app-logo app-logo-desktop">
+                <img src="/static/icons/favicon.svg" alt="DeskAgent" class="app-logo app-logo-mobile">
+            </a>
+            <span class="header-slogan" id="headerSlogan">Your Desktop. Your Agent.</span>
+        </div>
+        <div class="header-right">
+            <!-- Category Filter Dropdown (left-aligned) -->
+            <div class="category-dropdown" id="categoryDropdown">
+                <div class="header-badge" onclick="toggleCategoryMenu()" data-i18n-title="header.filter_category">
+                    <span class="material-icons badge-icon-dark" id="categoryIcon">apps</span>
+                    <span id="categoryLabel" data-i18n="header.all">Alle</span>
+                </div>
+                <div class="dropdown-menu" id="categoryMenu">
+                    <!-- Suchfeld im Dropdown -->
+                    <div class="dropdown-search">
+                        <span class="material-icons search-icon">search</span>
+                        <input type="text"
+                               id="categorySearchInput"
+                               placeholder="Filter..."
+                               oninput="filterTilesBySearch(this.value)"
+                               onclick="event.stopPropagation()">
+                        <button class="clear-search-btn" onclick="clearCategorySearch(event)" style="display:none">
+                            <span class="material-icons">close</span>
+                        </button>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <!-- Alle Kategorie -->
+                    <div class="dropdown-item active" data-category="all" onclick="filterByCategory('all')">
+                        <span class="material-icons dropdown-icon">apps</span>
+                        <span data-i18n="header.all">Alle</span>
+                    </div>
+                    {{CATEGORY_ITEMS}}
+                    <div class="dropdown-divider"></div>
+                    <!-- Hidden Kategorie -->
+                    <div class="dropdown-item" data-category="hidden" onclick="filterByCategory('hidden')">
+                        <span class="material-icons dropdown-icon">visibility_off</span>
+                        <span>Hidden</span>
+                    </div>
+                </div>
+            </div>
+            <input type="hidden" id="categoryData" value="{{CATEGORY_DATA}}">
+            <!-- Content Mode Selector -->
+            <div class="content-mode-dropdown {{CONTENT_MODE_HIDDEN}}" id="contentModeDropdown">
+                <div class="header-badge" onclick="toggleContentModeMenu()" title="Content Mode">
+                    <span id="contentModeLabel">{{CONTENT_MODE_LABEL}}</span>
+                </div>
+                <div class="dropdown-menu" id="contentModeMenu">
+                    <div class="dropdown-item {{CUSTOM_ACTIVE}}" onclick="setContentMode('custom')">
+                        <span data-i18n="content_mode.custom">Custom</span>
+                        <span class="dropdown-desc" data-i18n="content_mode.custom_desc">Nur eigene</span>
+                    </div>
+                    <div class="dropdown-item {{BOTH_ACTIVE}}" onclick="setContentMode('both')">
+                        <span data-i18n="content_mode.both">Both</span>
+                        <span class="dropdown-desc" data-i18n="content_mode.both_desc">Eigene + Standard</span>
+                    </div>
+                    <div class="dropdown-item {{STANDARD_ACTIVE}}" onclick="setContentMode('standard')">
+                        <span data-i18n="content_mode.standard">Standard</span>
+                        <span class="dropdown-desc" data-i18n="content_mode.standard_desc">Nur Standard</span>
+                    </div>
+                </div>
+            </div>
+            <div class="header-spacer"></div>
+            {{DEV_HEADER_ICON}}
+            <!-- Demo Mode Badge -->
+            <div id="demoBadge" class="header-badge" onclick="toggleDemoMode()" data-i18n-title="demo.toggle" style="display:none;">
+                <span id="demoStatus">Demo</span>
+            </div>
+            <div class="header-badge {{ANON_CLASS}}" id="anonBadge" onclick="showAnonDetails()" data-i18n-title="anon.click_for_details">
+                <span class="material-icons badge-icon-dark" id="anonIcon">{{ANON_ICON}}</span>
+                <span id="anonText">{{ANON_TEXT}}</span>
+            </div>
+            <div class="header-badge cost" onclick="resetTotalCost()" data-i18n-title="header.api_costs_click">
+                <span class="material-icons badge-icon-dark">payments</span>
+                <span id="totalCostDisplay">$0.00</span>
+            </div>
+            <!-- Running Tasks Badge -->
+            <div class="header-badge running-tasks" id="runningTasksBadge" onclick="toggleRunningTasksPanel()" data-i18n-title="header.running_tasks" style="display: none">
+                <span class="material-icons badge-icon-dark">sync</span>
+                <span id="runningTasksCount">0</span>
+            </div>
+            <!-- Scheduler Badge - temporarily hidden -->
+            <div class="header-badge watcher" id="watcherBadge" onclick="toggleWatcherPanel()" data-i18n-title="header.scheduler_click" style="display: none">
+                <span class="material-icons badge-icon-dark" id="watcherIcon">schedule</span>
+                <span id="watcherStatus" data-i18n="header.scheduler">Scheduler</span>
+                <span class="watcher-count" id="watcherCount" style="display: none">0</span>
+            </div>
+            <!-- Simple/Expert Mode Toggle -->
+            <div class="mode-toggle" id="modeToggle" onclick="toggleSimpleMode()" title="{{SIMPLE_MODE_TOOLTIP}}">
+                <span class="material-icons">{{SIMPLE_MODE_ICON}}</span>
+                <span class="mode-label">{{SIMPLE_MODE_LABEL}}</span>
+            </div>
+            <!-- Settings -->
+            <div class="header-badge" onclick="openSettings()" data-i18n-title="header.settings" style="cursor: pointer;">
+                <span class="material-icons badge-icon-dark">settings</span>
+            </div>
+            <!-- View Switch Buttons -->
+            <!-- Open Browser (Quick Access mode only) -->
+            <button class="view-switch-btn open-browser-btn" onclick="openBrowserView()" aria-label="Open in Browser" title="Open in Browser">
+                <span class="material-icons">open_in_new</span>
+            </button>
+            <!-- Open Quick Access (Browser mode only) -->
+            <button class="view-switch-btn open-quickaccess-btn" onclick="openQuickAccess()" aria-label="Quick Access" title="Quick Access">
+                <span class="material-icons">picture_in_picture_alt</span>
+            </button>
+            <!-- History Toggle (Mobile Only) -->
+            <button class="header-history-toggle" onclick="openHistoryPanel()" aria-label="History">
+                <span class="material-icons">history</span>
+            </button>
+            <!-- Hamburger Toggle (Mobile Only) - positioned at far right -->
+            <button class="hamburger-toggle" onclick="toggleHamburgerMenu()" aria-label="Menu">
+                <span class="material-icons">menu</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Background Tasks Mini-Tiles (shows running tasks not triggered by UI) -->
+        <div class="background-tasks-container" id="backgroundTasksContainer"></div>
+
+        <!-- Tile Grid (visible when idle) -->
+        <div class="tile-grid" id="tileGrid">
+            <div class="tiles">
+                {{CHAT_TILES}}
+                {{SKILL_TILES}}
+                {{AGENT_TILES}}
+                {{WORKFLOW_TILES}}
+            </div>
+        </div>
+
+        <!-- System Panel (DevTools-style overlay) -->
+        <div class="system-panel hidden" id="systemPanel">
+            <div class="system-panel-header">
+                <div class="system-panel-tabs">
+                    <button class="system-tab active" onclick="switchSystemTab('overview')" id="sysTabOverview">
+                        <span class="material-icons">dashboard</span> <span data-i18n="system.overview">Übersicht</span>
+                    </button>
+                    {{DEV_TABS}}
+                </div>
+                <button class="system-close-btn" onclick="closeSystemPanel()">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="system-panel-content">
+                <!-- Overview Tab -->
+                <div class="system-tab-content" id="sysContentOverview">
+                    <div class="system-overview-grid">
+                        <div class="system-card">
+                            <div class="system-card-header">
+                                <span class="material-icons">smart_toy</span>
+                                <h4 data-i18n="system.deskagent">DeskAgent</h4>
+                            </div>
+                            <div class="system-card-content">
+                                <div class="system-stat-row">
+                                    <span data-i18n="system.version">Version:</span>
+                                    <span id="sysVersion">-</span>
+                                </div>
+                                <div class="system-stat-row">
+                                    <span data-i18n="system.uptime">Uptime:</span>
+                                    <span id="sysUptime">-</span>
+                                </div>
+                                <div class="system-stat-row">
+                                    <span data-i18n="system.python">Python:</span>
+                                    <span id="sysPython">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="system-card">
+                            <div class="system-card-header">
+                                <span class="material-icons">payments</span>
+                                <h4 data-i18n="system.api_costs">API Kosten</h4>
+                            </div>
+                            <div class="system-card-content">
+                                <div class="system-stat-row">
+                                    <span data-i18n="system.cost_today">Heute:</span>
+                                    <span id="sysCostToday">$0.00</span>
+                                </div>
+                                <div class="system-stat-row">
+                                    <span data-i18n="system.cost_month">Monat:</span>
+                                    <span id="sysCostMonth">$0.00</span>
+                                </div>
+                                <div class="system-stat-row">
+                                    <span data-i18n="system.cost_total">Gesamt:</span>
+                                    <span id="sysCostTotal">$0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="system-card">
+                            <div class="system-card-header">
+                                <span class="material-icons">extension</span>
+                                <h4 data-i18n="system.mcp_servers">MCP Server</h4>
+                            </div>
+                            <div class="system-card-content" id="sysMcpStatus">
+                                <div class="system-stat-row">
+                                    <span data-i18n="system.mcp_active">Aktiv:</span>
+                                    <span>-</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="system-card">
+                            <div class="system-card-header">
+                                <span class="material-icons">settings</span>
+                                <h4 data-i18n="system.quick_actions">Quick Actions</h4>
+                            </div>
+                            <div class="system-card-content system-actions">
+                                <button class="system-action-btn" onclick="openSettings()">
+                                    <span class="material-icons">tune</span> <span data-i18n="system.settings">Einstellungen</span>
+                                </button>
+                                <button class="system-action-btn" onclick="reloadConfig()">
+                                    <span class="material-icons">refresh</span> <span data-i18n="system.reload_config">Config neu laden</span>
+                                </button>
+                                <button class="system-action-btn" onclick="openLogFile()">
+                                    <span class="material-icons">folder_open</span> <span data-i18n="system.open_log">Log-Ordner</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {{DEV_TAB_CONTENT}}
+            </div>
+        </div>
+
+        <!-- Unified Processing Overlay (Loading + Thinking modes) -->
+        <div class="ai-processing-overlay" id="aiProcessingOverlay" data-mode="hidden">
+            <div class="ai-processing-card">
+                <img src="/static/icons/icon.svg" alt="" class="ai-processing-icon">
+                <div class="ai-processing-text" id="aiProcessingText"><span data-i18n="processing.text">Verarbeite</span><span class="loading-dots"></span></div>
+                <div class="ai-processing-status" id="aiProcessingStatus"></div>
+                <div class="ai-processing-timer" id="aiProcessingTimer">0s</div>
+                <!-- Spinner for thinking mode -->
+                <div class="ai-processing-spinner" id="aiProcessingSpinner">
+                    <div class="spinner-ring"></div>
+                </div>
+                <!-- Live context stats during operation -->
+                <div class="ai-processing-context" id="aiProcessingContext" style="display: none;">
+                    <span class="context-label">Context:</span>
+                    <span class="context-value" id="aiProcessingContextValue">-</span>
+                </div>
+                <!-- Context breakdown (System/Prompt/Tools tokens) -->
+                <div class="ai-processing-breakdown" id="aiProcessingBreakdown" style="display: none;"></div>
+                <!-- Tool call counter and current tool -->
+                <div class="ai-processing-tools" id="aiProcessingTools" style="display: none;">
+                    <span class="material-icons">build</span>
+                    <span id="aiProcessingToolsCount">0</span> Tools
+                    <span id="aiProcessingCurrentTool" class="current-tool"></span>
+                </div>
+                <button class="ai-processing-cancel" id="aiProcessingCancel" onclick="cancelCurrentTask()">
+                    <span class="material-icons">close</span> Abbrechen <span class="cancel-hint">(ESC)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Result Panel (visible after completion) -->
+        <div class="result-panel" id="resultPanel">
+            <div class="result-header">
+                <h3 id="resultTitle">Ergebnis</h3>
+                <button class="close-btn" onclick="closeResult()">&times;</button>
+            </div>
+            <div class="result-stats" id="resultStats" style="display: none;">
+                <div class="stat">
+                    <span class="stat-label">AI:</span>
+                    <span class="stat-value" id="statBackend">-</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Model:</span>
+                    <span class="stat-value" id="statModel">-</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Zeit:</span>
+                    <span class="stat-value" id="statDuration">-</span>
+                </div>
+                <div class="stat" id="statTokensContainer">
+                    <span class="stat-label">Tokens:</span>
+                    <span class="stat-value" id="statTokens">-</span>
+                </div>
+                <div class="stat" id="statContextContainer" style="display: none;">
+                    <span class="stat-label">Context:</span>
+                    <span class="stat-value" id="statContext">-</span>
+                </div>
+                <div class="stat" id="statCostContainer">
+                    <span class="stat-label">Kosten:</span>
+                    <span class="stat-value" id="statCost">-</span>
+                </div>
+            </div>
+            <div class="result-content" id="resultContent"></div>
+        </div>
+
+        <!-- Scheduler Panel (email watchers, timed jobs, event triggers) -->
+        <div class="watcher-panel" id="watcherPanel">
+            <div class="watcher-panel-header">
+                <h4><span class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 6px;">schedule</span>Scheduler</h4>
+                <div class="watcher-controls">
+                    <button class="watcher-toggle-btn" onclick="toggleWatcher()" id="watcherToggleBtn" data-i18n-title="scheduler.toggle_tooltip" title="Scheduler an/aus">
+                        <span class="material-icons" id="watcherToggleIcon">play_arrow</span>
+                    </button>
+                    <button class="watcher-check-btn" onclick="checkNow()" data-i18n-title="scheduler.check_now_tooltip" title="Jetzt ausführen">
+                        <span class="material-icons">refresh</span>
+                    </button>
+                    <button class="watcher-close-btn" onclick="toggleWatcherPanel()">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+            </div>
+            <div class="watcher-panel-content">
+                <div class="watcher-stats">
+                    <div class="watcher-stat-row">
+                        <span>Status:</span>
+                        <span id="watcherRunningStatus">-</span>
+                    </div>
+                    <div class="watcher-stat-row">
+                        <span data-i18n="scheduler.processed_today">Heute verarbeitet:</span>
+                        <span id="watcherProcessed">0</span>
+                    </div>
+                    <div class="watcher-stat-row">
+                        <span data-i18n="scheduler.actions_today">Aktionen heute:</span>
+                        <span id="watcherActions">0</span>
+                    </div>
+                    <div class="watcher-stat-row">
+                        <span data-i18n="scheduler.last_check">Letzter Check:</span>
+                        <span id="watcherLastCheck">-</span>
+                    </div>
+                    <div class="watcher-stat-row">
+                        <span data-i18n="scheduler.next_check">Nächster Check:</span>
+                        <span id="watcherNextCheck">-</span>
+                    </div>
+                </div>
+                <h5 data-i18n="scheduler.recent_activity">Letzte Aktivität</h5>
+                <div class="watcher-action-log" id="watcherLog">
+                    <div class="watcher-empty-state" data-i18n="scheduler.no_activity">Keine Aktivität</div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- History Edge Trigger (right side) - always visible tab -->
+    <div class="history-edge-trigger" id="historyEdgeTrigger">
+        <span class="material-icons">history</span>
+    </div>
+
+    <!-- History Panel (Slide-In from Right) -->
+    <div class="history-panel" id="historyPanel">
+        <div class="history-panel-header">
+            <h3>History</h3>
+            <div class="header-spacer"></div>
+            <button class="history-delete-all-btn" onclick="showDeleteAllConfirm()" title="Delete all sessions">
+                <span class="material-icons">delete_sweep</span>
+            </button>
+            <button class="history-pin-btn" id="historyPinBtn" onclick="toggleHistoryPin()" title="Pin panel">
+                <span class="material-icons">push_pin</span>
+            </button>
+            <button class="close-btn" onclick="closeHistoryPanel()" title="Close">&times;</button>
+        </div>
+
+        <div class="history-session-list" id="historySessionList">
+            <div class="history-empty-state">
+                <span class="material-icons">inbox</span>
+                <p>No chat history yet</p>
+            </div>
+        </div>
+
+        <div class="history-panel-footer" id="historyPanelFooter">
+            <span id="historySessionCount">0 sessions</span>
+            <span id="historyTurnCount">0 turns</span>
+            <span id="historyTotalCost">$0.00</span>
+        </div>
+    </div>
+
+    <!-- Prompt Area (visible when running/finished) -->
+    <div class="prompt-area hidden" id="promptArea">
+        <!-- Chat Attachments Area -->
+        <div class="chat-attachments" id="chatAttachments">
+            <div class="chat-attachment-list" id="chatAttachmentList"></div>
+        </div>
+        <textarea class="prompt-input" id="promptInput" data-i18n-placeholder="prompt.placeholder" placeholder="Frage an AI Assistant..."></textarea>
+        <div class="prompt-actions">
+            <button class="prompt-btn attach" id="attachBtn" onclick="openChatFileUpload()" data-i18n-title="prompt.attach">
+                <span class="material-icons">attach_file</span>
+            </button>
+            <button class="prompt-btn voice hidden" id="voiceBtn" onclick="toggleVoiceRecording()" data-i18n-title="prompt.voice">
+                <span class="material-icons">mic</span>
+            </button>
+            <button class="prompt-btn new-context" id="newContextBtn" onclick="startNewContext()" data-i18n-title="prompt.new_context">
+                <span class="material-icons">add_comment</span> <span data-i18n="prompt.new">Neu</span>
+            </button>
+            <button class="prompt-btn send" id="sendBtn" onclick="sendPrompt()" data-i18n="prompt.send">Senden</button>
+        </div>
+    </div>
+
+    <!-- Footer (fixed at bottom) -->
+    <div class="app-footer">
+        <a href="{{BRANDING_DOC_URL}}" target="_blank" class="footer-link" data-i18n="footer.documentation">Dokumentation</a>
+        <span>DeskAgent {{VERSION}} {{BRANDING_COPYRIGHT}}</span>
+    </div>
+
+    <!-- Connection Lost Overlay -->
+    <div class="connection-lost-overlay" id="connectionLostOverlay">
+        <div class="connection-lost-content">
+            <span class="material-icons" id="connectionIcon">wifi_off</span>
+            <span id="connectionStatus" data-i18n="status.connection_lost">Verbindung unterbrochen</span>
+            <span class="reconnect-spinner" id="reconnectSpinner"></span>
+        </div>
+    </div>
+
+
+<!-- JavaScript Modules (loaded after DOM) -->
+<script src="/static/js/webui-viewcontext.js"></script>
+<script src="/static/js/webui-ui.js"></script>
+<script src="/static/js/webui-dialogs.js"></script>
+<script src="/static/js/webui-tasks.js"></script>
+<script src="/static/js/webui-agents.js"></script>
+<script src="/static/js/webui-comparison.js"></script>
+<script>window.BRANDING_PORTAL_URL = '{{BRANDING_PORTAL_URL}}';</script>
+<script src="/static/js/webui-settings.js"></script>
+<script src="/static/js/webui-voice.js"></script>
+<script src="/static/js/webui-history.js"></script>
+
+
+
+<!-- Settings Panel -->
+<div class="settings-panel hidden" id="settingsPanel">
+    <div class="settings-header">
+        <h3 data-i18n="settings.title">System</h3>
+        <div class="settings-header-spacer"></div>
+        <button class="close-btn" onclick="closeSettings()" data-i18n-title="settings.close">&times;</button>
+    </div>
+    <!-- Tab Navigation -->
+    <div class="settings-tabs">
+        <button class="settings-tab active" onclick="switchSettingsTab('info')" id="settingsTabInfo">
+            <span class="material-icons">info</span> <span data-i18n="settings.tabs.info">Info</span>
+        </button>
+        <button class="settings-tab" onclick="switchSettingsTab('license')" id="settingsTabLicense">
+            <span class="material-icons">verified</span> <span data-i18n="settings.tabs.license">Lizenz</span>
+        </button>
+        <button class="settings-tab" onclick="switchSettingsTab('update')" id="settingsTabUpdate">
+            <span class="material-icons">system_update</span> <span data-i18n="settings.tabs.update">Update</span>
+        </button>
+        <button class="settings-tab" onclick="switchSettingsTab('preferences')" id="settingsTabPreferences">
+            <span class="material-icons">tune</span> <span data-i18n="settings.tabs.preferences">Optionen</span>
+        </button>
+        <button class="settings-tab" onclick="switchSettingsTab('support')" id="settingsTabSupport">
+            <span class="material-icons">support</span> <span data-i18n="settings.tabs.support">Support</span>
+        </button>
+        <button class="settings-tab" onclick="switchSettingsTab('system')" id="settingsTabSystem">
+            <span class="material-icons">computer</span> <span data-i18n="settings.tabs.system">System</span>
+        </button>
+        <button class="settings-tab" onclick="switchSettingsTab('anonymization')" id="settingsTabAnonymization">
+            <span class="material-icons">security</span> <span data-i18n="settings.tabs.anonymization">Anonymization</span>
+        </button>
+        <button class="settings-tab" onclick="switchSettingsTab('integrations')" id="settingsTabIntegrations">
+            <span class="material-icons">link</span> <span data-i18n="settings.tabs.integrations">Integrationen</span>
+        </button>
+        {{SETTINGS_DEV_TABS}}
+    </div>
+    <div class="settings-content">
+        <!-- Info Tab -->
+        <div class="settings-tab-content" id="settingsContentInfo">
+            <div class="settings-split-layout">
+                <!-- Left: About DeskAgent -->
+                <div class="settings-split-left">
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                            <span class="material-icons">info</span>
+                            <h4>DeskAgent</h4>
+                        </div>
+                        <div class="settings-card-content">
+                            <div class="version-info">
+                                <span class="version-label">Version:</span>
+                                <span class="version-value" id="infoVersion">-</span>
+                            </div>
+                            <div class="version-info">
+                                <span class="version-label">Copyright:</span>
+                                <span class="version-value">{{BRANDING_COPYRIGHT}}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                            <span class="material-icons">gavel</span>
+                            <h4 data-i18n="settings.info.license_title">Lizenz</h4>
+                        </div>
+                        <div class="settings-card-content">
+                            <p style="margin: 0 0 12px 0; color: var(--text-secondary);" data-i18n="settings.info.license_text">DeskAgent ist propriet&auml;re Software. {{BRANDING_COPYRIGHT}}</p>
+                        </div>
+                        <div class="settings-card-actions">
+                            <a href="{{BRANDING_LICENSE_URL}}" target="_blank" rel="noopener" class="settings-btn small">
+                                <span class="material-icons">open_in_new</span> <span data-i18n="settings.info.license_link">Lizenzbedingungen</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Open Source -->
+                <div class="settings-split-right">
+                    <div class="settings-card" style="height: 100%;">
+                        <div class="settings-card-header">
+                            <span class="material-icons">code</span>
+                            <h4 data-i18n="settings.info.opensource_title">Open-Source-Komponenten</h4>
+                        </div>
+                        <div class="settings-card-content" style="flex: 1;">
+                            <p class="info-packages-text" style="color: var(--text-secondary); font-size: 13px; line-height: 1.6;">
+                                Claude Agent SDK (MIT), Anthropic SDK (MIT), MCP (MIT), Google GenAI (Apache 2.0),
+                                OpenAI (MIT), Qwen Agent (Apache 2.0), FastAPI (MIT), Uvicorn (BSD), SSE-Starlette (BSD),
+                                spaCy (MIT), Presidio (MIT), pypdf (BSD), pypdfium2 (BSD-3), openpyxl (MIT),
+                                Pillow (HPND), pywin32 (PSF), keyboard (MIT), pystray (LGPL), sounddevice (MIT),
+                                soundfile (BSD), MSAL (MIT), Google Auth (Apache 2.0), requests (Apache 2.0),
+                                NumPy (BSD), psutil (BSD), Material Icons (Apache 2.0)
+                            </p>
+                        </div>
+                        <div class="settings-card-actions">
+                            <a href="{{BRANDING_LICENSES_URL}}" target="_blank" rel="noopener" class="settings-btn small">
+                                <span class="material-icons">open_in_new</span> <span data-i18n="settings.info.licenses_link">Vollst&auml;ndige Lizenztexte</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Update Tab - Centered Single Column -->
+        <div class="settings-tab-content hidden" id="settingsContentUpdate">
+            <div class="update-tab-layout">
+                <!-- Main Update Card -->
+                <div class="update-main-card">
+                    <div class="update-version-display">
+                        <span class="update-version-number" id="localVersion">-</span>
+                        <span class="update-version-label" data-i18n="settings.update.installed_version">Installierte Version</span>
+                    </div>
+
+                    <!-- Release Notes for installed version -->
+                    <div class="current-version-notes" id="currentVersionNotes"></div>
+
+                    <div class="update-status-badge" id="updateStatusBadge">
+                        <span class="material-icons">check_circle</span>
+                        <span data-i18n="settings.update.up_to_date">Auf dem neuesten Stand</span>
+                    </div>
+
+                    <div class="update-new-version hidden" id="updateNewVersion">
+                        <span class="update-arrow material-icons">arrow_downward</span>
+                        <span class="update-new-tag" id="remoteVersion">-</span>
+                        <span class="update-new-label" data-i18n="settings.update.new_available">Neue Version verfügbar</span>
+                        <!-- Release Notes for new version -->
+                        <div class="new-version-notes" id="newVersionNotes"></div>
+                    </div>
+
+                    <div class="update-actions">
+                        <button class="update-btn-primary accent hidden" onclick="runUpdate()" id="updateBtn">
+                            <span class="material-icons">download</span>
+                            <span data-i18n="settings.update.install">Update installieren</span>
+                        </button>
+                    </div>
+
+                    <div class="update-status" id="settingsUpdateStatus"></div>
+
+                    <!-- Download Instructions (shown after download starts) -->
+                    <div class="download-instructions hidden" id="downloadInstructions">
+                        <h5><span class="material-icons">info</span> <span data-i18n="settings.update.next_steps">Nächste Schritte</span></h5>
+                        <ol>
+                            <li data-i18n="settings.update.step_close">DeskAgent schließen</li>
+                            <li data-i18n="settings.update.step_run">Heruntergeladenen Installer ausführen</li>
+                            <li data-i18n="settings.update.step_restart">DeskAgent neu starten</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Version History -->
+                <div class="version-history-section">
+                    <div class="version-history-header" onclick="toggleVersionHistory()">
+                        <span class="material-icons">history</span>
+                        <h4 data-i18n="settings.update.version_history">Versionsverlauf</h4>
+                        <span class="material-icons expand-icon" id="versionHistoryExpandIcon">expand_more</span>
+                    </div>
+                    <div class="version-history-content hidden" id="versionHistoryContent">
+                        <div class="version-list" id="versionList">
+                            <div class="loading-versions" data-i18n="settings.update.loading">Lade Versionen...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preferences Tab -->
+        <div class="settings-tab-content hidden" id="settingsContentPreferences">
+            <div class="settings-split-layout">
+                <!-- Left: General Settings -->
+                <div class="settings-split-left">
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                            <span class="material-icons">language</span>
+                            <h4 data-i18n="settings.preferences.language_region">Sprache & Region</h4>
+                        </div>
+                        <div class="settings-card-content">
+                            <div class="settings-item">
+                                <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;" data-i18n="settings.preferences.language">Sprache:</label>
+                                <select id="prefLanguage" class="settings-input" onchange="changeLanguage(this.value)">
+                                    <option value="de">Deutsch</option>
+                                    <option value="en">English</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-card" style="margin-top: 12px;">
+                        <div class="settings-card-header">
+                            <span class="material-icons">palette</span>
+                            <h4 data-i18n="settings.preferences.appearance">Erscheinungsbild</h4>
+                        </div>
+                        <div class="settings-card-content">
+                            <div class="settings-item">
+                                <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;" data-i18n="settings.preferences.theme">Theme:</label>
+                                <select id="prefTheme" class="settings-input" onchange="changeTheme(this.value)">
+                                    <option value="light" data-i18n="settings.preferences.theme_light">Hell</option>
+                                    <option value="dark" data-i18n="settings.preferences.theme_dark">Dunkel</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Right: Behavior Settings -->
+                <div class="settings-split-right">
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                            <span class="material-icons">rocket_launch</span>
+                            <h4 data-i18n="settings.preferences.startup">Autostart</h4>
+                        </div>
+                        <div class="settings-card-content">
+                            <div class="settings-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <div>
+                                    <div style="font-weight: 500;" data-i18n="settings.preferences.auto_browser">Browser-Ansicht öffnen</div>
+                                    <div style="font-size: 11px; color: var(--text-muted);" data-i18n="settings.preferences.auto_browser_desc">Startet automatisch im Browser-Modus</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="prefAutoBrowser" onchange="saveStartupPreference('ui.auto_open_browser', this.checked)">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-row" style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-weight: 500;" data-i18n="settings.preferences.auto_quick_access">Quick Access öffnen</div>
+                                    <div style="font-size: 11px; color: var(--text-muted);" data-i18n="settings.preferences.auto_quick_access_desc">Startet automatisch Quick Access</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="prefAutoQuickAccess" onchange="saveStartupPreference('ui.auto_open_quick_access', this.checked)">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-card" style="margin-top: 12px;">
+                        <div class="settings-card-header">
+                            <span class="material-icons">smart_toy</span>
+                            <h4 data-i18n="settings.preferences.ai_model">KI-Modell</h4>
+                        </div>
+                        <div class="settings-card-content">
+                            <div class="settings-item">
+                                <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;" data-i18n="settings.preferences.ai_model_label">KI-Modell fuer alle Agents:</label>
+                                <select id="prefBackendOverride" class="settings-input" onchange="changeBackendOverride(this.value)">
+                                    <option value="auto" data-i18n="settings.preferences.ai_model_auto">Auto (laut Agent-Konfiguration)</option>
+                                </select>
+                            </div>
+                            <p id="backendOverrideHint" class="hidden" style="font-size: 11px; color: var(--accent-color); margin-top: 6px; margin-bottom: 0;">
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- License Tab - Split Layout -->
+        <div class="settings-tab-content hidden" id="settingsContentLicense">
+            <div class="settings-split-layout">
+                <!-- Left: License Status -->
+                <div class="settings-split-left">
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                            <span class="material-icons">verified</span>
+                            <h4 data-i18n="settings.license.title">Aktuelle Lizenz</h4>
+                        </div>
+                        <div class="settings-card-content">
+                            <div class="license-status" id="licenseStatus">
+                                <!-- Edition Badge -->
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                                    <span class="license-edition-badge" id="licenseEdition" style="display: none;"></span>
+                                    <span class="license-status-badge inactive" id="licenseStatusBadge">...</span>
+                                </div>
+                                <div class="version-info">
+                                    <span class="version-label" data-i18n="settings.license.email">E-Mail:</span>
+                                    <span class="version-value" id="licenseName">-</span>
+                                </div>
+                                <div class="version-info">
+                                    <span class="version-label" data-i18n="settings.license.device">Gerät:</span>
+                                    <span class="version-value" id="licenseDevice">-</span>
+                                </div>
+                                <div class="version-info">
+                                    <span class="version-label" data-i18n="settings.license.device_id">Geräte-ID:</span>
+                                    <span class="version-value" id="licenseDeviceId" style="font-family: monospace; font-size: 11px;">-</span>
+                                </div>
+                                <div class="version-info">
+                                    <span class="version-label" data-i18n="settings.license.valid_until">Gültig bis:</span>
+                                    <span class="version-value" id="licenseExpiry">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Right: Activation & Pricing -->
+                <div class="settings-split-right">
+                    <!-- Activation Card -->
+                    <div class="settings-card" id="activationCard">
+                        <div class="settings-card-header">
+                            <span class="material-icons">key</span>
+                            <h4 data-i18n="settings.license.activate_title">Lizenz aktivieren</h4>
+                        </div>
+                        <div class="settings-card-content">
+                            <!-- Activation Method Toggle -->
+                            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;" data-i18n="settings.license.method_hint">Aktivierung per Rechnung oder Code:</p>
+                            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                                <button type="button" class="license-method-btn active" id="methodInvoice" onclick="switchLicenseMethod('invoice')">
+                                    <span class="material-icons" style="font-size: 16px;">receipt</span> <span data-i18n="settings.license.method_invoice">per Rechnung</span>
+                                </button>
+                                <button type="button" class="license-method-btn" id="methodCode" onclick="switchLicenseMethod('code')">
+                                    <span class="material-icons" style="font-size: 16px;">vpn_key</span> <span data-i18n="settings.license.method_code">per Code</span>
+                                </button>
+                            </div>
+
+                            <!-- Invoice + ZIP Fields -->
+                            <div id="invoiceFields">
+                                <div class="settings-item" style="margin-bottom: 12px;">
+                                    <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;" data-i18n="settings.license.invoice_number">Rechnungsnummer:</label>
+                                    <input type="text" id="licenseInvoiceNumber" class="settings-input" data-i18n-placeholder="settings.license.invoice_placeholder" placeholder="XXXX-XXX" style="font-family: monospace;">
+                                </div>
+                                <div class="settings-item" style="margin-bottom: 12px;">
+                                    <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;" data-i18n="settings.license.zip_code">PLZ:</label>
+                                    <input type="text" id="licenseZipCode" class="settings-input" data-i18n-placeholder="settings.license.zip_placeholder" placeholder="12345" style="font-family: monospace;">
+                                </div>
+                            </div>
+
+                            <!-- Code Field (hidden by default) -->
+                            <div id="codeFields" style="display: none;">
+                                <div class="settings-item" style="margin-bottom: 12px;">
+                                    <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;" data-i18n="settings.license.activation_code">Aktivierungscode:</label>
+                                    <input type="text" id="licenseCode" class="settings-input" data-i18n-placeholder="settings.license.code_placeholder" placeholder="SUB-XXXX-XXXX-XXXX-XXXX" style="font-family: monospace;">
+                                </div>
+                            </div>
+
+                            <!-- Email (optional, for info) -->
+                            <div class="settings-item">
+                                <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;" data-i18n="settings.license.email_address">E-Mail-Adresse:</label>
+                                <input type="email" id="licenseEmail" class="settings-input" data-i18n-placeholder="settings.license.email_placeholder" placeholder="ihre@email.de">
+                            </div>
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 12px;" data-i18n="settings.license.activate_hint">
+                                Rechnungsnummer und PLZ finden Sie auf Ihrer Rechnung.
+                            </p>
+                        </div>
+                        <div class="settings-card-actions">
+                            <button class="settings-btn primary" id="licenseActionBtn" onclick="toggleLicenseActivation()">
+                                <span class="material-icons" id="licenseActionIcon">check_circle</span> <span id="licenseActionText" data-i18n="settings.license.activate">Aktivieren</span>
+                            </button>
+                        </div>
+                        <div class="update-status" id="licenseStatusMsg"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Support Tab -->
+        <div class="settings-tab-content hidden" id="settingsContentSupport">
+            <div class="settings-split-layout">
+                <div class="settings-split-left">
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                            <span class="material-icons">contact_support</span>
+                            <h4 data-i18n="settings.support.contact_title">Support kontaktieren</h4>
+                        </div>
+                        <div class="settings-card-content">
+                            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;" data-i18n="settings.support.contact_text">
+                                Fragen, Probleme, Bedienung oder technische Hilfe – unser interner DeskAgent arbeitet rund um die Uhr.
+                            </p>
+                        </div>
+                        <div class="settings-card-actions">
+                            <button class="settings-btn primary" onclick="window.location.href='mailto:{{BRANDING_SUPPORT_EMAIL}}?subject=DeskAgent%20Frage'">
+                                <span class="material-icons">email</span> {{BRANDING_SUPPORT_EMAIL}}
+                            </button>
+                        </div>
+                        <div class="update-status" id="supportStatus"></div>
+                    </div>
+
+                    <div class="settings-card" style="margin-top: 16px;">
+                        <div class="settings-card-header">
+                            <span class="material-icons">account_circle</span>
+                            <h4 data-i18n="settings.support.portal_title">Kundenportal</h4>
+                        </div>
+                        <div class="settings-card-content">
+                            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;" data-i18n="settings.support.portal_text">
+                                Verwalten Sie Ihr Abonnement, Rechnungsadresse und Unterlizenzen.
+                            </p>
+                        </div>
+                        <div class="settings-card-actions">
+                            <button class="settings-btn primary" onclick="window.open('{{BRANDING_PORTAL_URL}}', '_blank')">
+                                <span class="material-icons">open_in_new</span> <span data-i18n="settings.support.portal_open">Kundenportal öffnen</span>
+                            </button>
+                        </div>
+                        <div style="margin-top: 12px; padding: 12px; background: var(--bg-secondary); border-radius: 8px;">
+                            <div style="font-size: 12px; color: var(--text-secondary);">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                                    <span class="material-icons" style="font-size: 16px;">cancel</span>
+                                    <span data-i18n="settings.support.portal_cancel">Abo kündigen</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                                    <span class="material-icons" style="font-size: 16px;">receipt</span>
+                                    <span data-i18n="settings.support.portal_billing">Rechnungsadresse ändern</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span class="material-icons" style="font-size: 16px;">group_add</span>
+                                    <span data-i18n="settings.support.portal_sublicenses">Temporäre Unterlizenzen vergeben</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-card" style="margin-top: 16px;">
+                        <div class="settings-card-header">
+                            <span class="material-icons">folder_open</span>
+                            <h4>System-Log</h4>
+                        </div>
+                        <div class="settings-card-content">
+                            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+                                Bei komplexen Fehlern hilft das Log-File bei der Analyse.
+                            </p>
+                        </div>
+                        <div class="settings-card-actions">
+                            <button class="settings-btn" onclick="sendLogToSupport()">
+                                <span class="material-icons">send</span> Log senden
+                            </button>
+                            <button class="settings-btn" onclick="openLogFile()">
+                                <span class="material-icons">folder_open</span> Ordner öffnen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Tab - System Info & Paths -->
+        <div class="settings-tab-content hidden" id="settingsContentSystem">
+            <div class="settings-split-layout">
+                <div class="settings-split-left">
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                            <span class="material-icons">info</span>
+                            <h4>System-Info</h4>
+                        </div>
+                        <div class="settings-card-content">
+                            <div class="version-info">
+                                <span class="version-label">Version:</span>
+                                <span class="version-value" id="systemVersion">-</span>
+                            </div>
+                            <div class="version-info">
+                                <span class="version-label">Build:</span>
+                                <span class="version-value" id="systemBuild">-</span>
+                            </div>
+                            <div class="version-info">
+                                <span class="version-label">Python:</span>
+                                <span class="version-value" id="systemPython">-</span>
+                            </div>
+                            <div class="version-info">
+                                <span class="version-label">Platform:</span>
+                                <span class="version-value" id="systemPlatform">-</span>
+                            </div>
+                            <div class="version-info">
+                                <span class="version-label">Uptime:</span>
+                                <span class="version-value" id="systemUptime">-</span>
+                            </div>
+                            <div style="margin-top: 16px; padding: 16px; background: var(--accent-gradient); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                <div style="color: white;">
+                                    <div style="font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                                        <span class="material-icons" style="font-size: 20px;">settings</span>
+                                        <span data-i18n="settings.system.setup_wizard">Setup Wizard</span>
+                                    </div>
+                                    <div style="font-size: 12px; opacity: 0.9; margin-top: 4px;" data-i18n="settings.system.setup_wizard_desc">API Keys und Backends konfigurieren</div>
+                                </div>
+                                <button onclick="window.open('/setup', '_blank')" style="padding: 10px 20px; font-size: 13px; font-weight: 500; background: white; color: var(--accent-primary); border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: transform 0.15s, box-shadow 0.15s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
+                                    <span class="material-icons" style="font-size: 18px;">launch</span>
+                                    <span data-i18n="settings.system.setup_wizard_start">Starten</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-card" style="margin-top: 12px;">
+                        <div class="settings-card-header">
+                            <span class="material-icons">folder</span>
+                            <h4 data-i18n="settings.system.directories">Verzeichnisse</h4>
+                        </div>
+                        <div class="settings-card-content paths-list" style="font-size: 11px;">
+                            <div class="path-item"><span class="path-label">Executable:</span><span class="path-value" id="pathExecutable">-</span></div>
+                            <div class="path-item"><span class="path-label" data-i18n="settings.system.path_project">Projekt:</span><span class="path-value" id="pathProject">-</span></div>
+                            <div class="path-item"><span class="path-label">Workspace:</span><span class="path-value" id="pathWorkspace">-</span></div>
+                            <div class="path-item"><span class="path-label">Config:</span><span class="path-value" id="pathConfig">-</span></div>
+                            <div class="path-item"><span class="path-label">Logs:</span><span class="path-value" id="pathLogs">-</span></div>
+                            <div class="path-item"><span class="path-label">Agents:</span><span class="path-value" id="pathAgents">-</span></div>
+                            <div class="path-item"><span class="path-label">Skills:</span><span class="path-value" id="pathSkills">-</span></div>
+                        </div>
+                    </div>
+                    <div class="settings-card" style="margin-top: 12px;">
+                        <div class="settings-card-header">
+                            <span class="material-icons">widgets</span>
+                            <h4 data-i18n="settings.system.plugins">Plugins</h4>
+                        </div>
+                        <div class="settings-card-content" id="pluginsStatusList" style="font-size: 12px;">
+                            <div class="mcp-status-empty" data-i18n="settings.system.loading">Lade...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-split-right">
+                    <!-- Ports & Services Card -->
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                            <span class="material-icons">power</span>
+                            <h4 data-i18n="settings.system.ports_title">Ports & Services</h4>
+                        </div>
+                        <div class="settings-card-content">
+                            <div class="version-info">
+                                <span class="version-label">HTTP Server</span>
+                                <span class="version-value">
+                                    <span id="portHttp">-</span>
+                                    <span id="portHttpStatus" class="port-status-indicator" title="Running"></span>
+                                </span>
+                            </div>
+                            <div class="version-info">
+                                <span class="version-label">MCP Proxy</span>
+                                <span class="version-value">
+                                    <span id="portMcpProxy">-</span>
+                                    <span id="portMcpProxyStatus" class="port-status-indicator" title="Not running"></span>
+                                </span>
+                            </div>
+                            <div class="version-info">
+                                <span class="version-label">FastMCP</span>
+                                <span class="version-value">
+                                    <span id="portFastmcp">-</span>
+                                    <span id="portFastmcpStatus" class="port-status-indicator" title="Not running"></span>
+                                </span>
+                            </div>
+                            <div class="version-info">
+                                <span class="version-label">Transport</span>
+                                <span class="version-value" id="mcpTransport">-</span>
+                            </div>
+                            <div style="margin-top: 16px; padding: 12px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-weight: 500; font-size: 13px;" data-i18n="settings.system.public_api">Public API</span>
+                                    <button onclick="copyPublicApiUrl()" class="icon-button" title="Copy URL" style="padding: 4px;">
+                                        <span class="material-icons" style="font-size: 16px;">content_copy</span>
+                                    </button>
+                                </div>
+                                <div style="font-size: 12px; font-family: monospace; color: var(--text-secondary); word-break: break-all;" id="publicApiUrl">-</div>
+                                <div style="margin-top: 8px; display: flex; gap: 8px;">
+                                    <a id="swaggerLink" href="#" target="_blank" style="font-size: 12px; color: var(--accent-primary); text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                                        <span class="material-icons" style="font-size: 14px;">open_in_new</span>
+                                        Swagger Docs
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- MCP Server list moved to Integrations tab -->
+            </div>
+        </div>
+
+        <!-- Anonymization Tab - Test & Config -->
+        <div class="settings-tab-content hidden" id="settingsContentAnonymization">
+            <div class="settings-split-layout">
+                <div class="settings-split-left">
+                    <!-- Anonymization Settings -->
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                            <span class="material-icons">settings</span>
+                            <h4>Settings</h4>
+                        </div>
+                        <div class="settings-card-content">
+                            <div class="settings-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <div>
+                                    <div style="font-weight: 500;">Anonymization</div>
+                                    <div style="font-size: 11px; color: var(--text-muted);">Automatically anonymize PII in agent prompts</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="anonEnabled" onchange="toggleAnonymization(this.checked)">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-row" style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-weight: 500;">Log Anonymization</div>
+                                    <div style="font-size: 11px; color: var(--text-muted);">Log detected entities to system.log</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="anonLogEnabled" onchange="toggleAnonymizationLog(this.checked)">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Test Section -->
+                    <div class="settings-card" style="margin-top: 12px;">
+                        <div class="settings-card-header">
+                            <span class="material-icons">science</span>
+                            <h4>Test Anonymization</h4>
+                        </div>
+                        <div class="settings-card-content">
+                            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
+                                Test anonymization on newest emails from your <strong>primary Inbox</strong> (last 7 days).
+                            </p>
+                            <p style="font-size: 11px; color: var(--success); margin-bottom: 12px;">
+                                <span class="material-icons" style="font-size: 14px; vertical-align: middle;">lock</span>
+                                All processing happens locally - no data is sent externally.
+                            </p>
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label style="font-size: 12px;">Number of emails:</label>
+                                <input type="number" id="anonTestCount" value="5" min="1" max="20" style="width: 60px; padding: 4px 8px;">
+                            </div>
+                            <button class="settings-button" onclick="runAnonymizationTest()">
+                                <span class="material-icons">play_arrow</span> Run Test
+                            </button>
+                        </div>
+                    </div>
+                    <div class="settings-card" style="margin-top: 12px;">
+                        <div class="settings-card-header">
+                            <span class="material-icons">shield</span>
+                            <h4>Whitelist</h4>
+                            <span class="badge" id="whitelistCount">0</span>
+                        </div>
+                        <div class="settings-card-content" id="whitelistDisplay" style="font-size: 11px; max-height: 400px; overflow-y: auto;">
+                            <div class="mcp-status-empty">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-split-right" style="display: flex; flex-direction: column; height: calc(100vh - 200px);">
+                    <div class="settings-card" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                        <div class="settings-card-header">
+                            <span class="material-icons">assignment</span>
+                            <h4>Test Results</h4>
+                        </div>
+                        <div class="settings-card-content" id="anonTestResults" style="font-size: 11px; flex: 1; overflow-y: auto; min-height: 0;">
+                            <div class="mcp-status-empty">Run a test to see results</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Integrations Tab - OAuth Providers -->
+        <div class="settings-tab-content hidden" id="settingsContentIntegrations">
+            <!-- Claude Desktop Integration Card -->
+            <div class="settings-card" style="margin-bottom: 16px;">
+                <div class="settings-card-header">
+                    <span class="material-icons">smart_toy</span>
+                    <h4>Claude Desktop / Cowork</h4>
+                    <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                        <span id="claudeDesktopStatusBadge" class="status-badge" style="font-size: 11px; padding: 2px 8px; border-radius: 10px; display: none;"></span>
+                    </div>
+                </div>
+                <div class="settings-card-content">
+                    <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;" data-i18n="settings.claude_desktop.description">
+                        Nutze alle DeskAgent-Tools (E-Mail, Rechnungen, DMS, ...) direkt in Claude Desktop oder Cowork.
+                    </p>
+
+                    <!-- Status -->
+                    <div id="claudeDesktopStatus" style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 16px; font-size: 12px;">
+                        <div id="claudeDesktopStatusText" style="color: var(--text-muted);" data-i18n="settings.claude_desktop.status_loading">Status wird geladen...</div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                        <button id="claudeDesktopSetupBtn" class="settings-btn primary" onclick="setupClaudeDesktop()" style="flex: 1;">
+                            <span class="material-icons" style="font-size: 16px; vertical-align: middle; margin-right: 4px;">add_circle</span>
+                            <span data-i18n="settings.claude_desktop.setup">Einrichten</span>
+                        </button>
+                        <button id="claudeDesktopRemoveBtn" class="settings-btn" onclick="removeClaudeDesktop()" style="flex: 1; display: none;">
+                            <span class="material-icons" style="font-size: 16px; vertical-align: middle; margin-right: 4px;">remove_circle</span>
+                            <span data-i18n="settings.claude_desktop.remove">Entfernen</span>
+                        </button>
+                    </div>
+
+                    <!-- Allowed MCPs -->
+                    <div id="claudeDesktopMcpSection" style="margin-bottom: 16px; display: none;">
+                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                            <span class="material-icons" style="font-size: 16px; color: var(--text-secondary);">tune</span>
+                            <span style="font-size: 12px; font-weight: 500;" data-i18n="settings.claude_desktop.allowed_mcps">Erlaubte MCP-Server</span>
+                            <span style="font-size: 11px; color: var(--text-muted); margin-left: auto;" id="claudeDesktopMcpCount"></span>
+                        </div>
+                        <div id="claudeDesktopMcpList" style="display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; background: var(--bg-tertiary); border-radius: 8px; min-height: 32px;">
+                            <span style="color: var(--text-muted); font-size: 11px;" data-i18n="settings.claude_desktop.loading">Lade...</span>
+                        </div>
+                        <div style="display: flex; gap: 6px; margin-top: 8px;">
+                            <button class="settings-btn" onclick="selectAllClaudeDesktopMcps(true)" style="font-size: 11px; padding: 4px 10px;" data-i18n="settings.claude_desktop.select_all">Alle</button>
+                            <button class="settings-btn" onclick="selectAllClaudeDesktopMcps(false)" style="font-size: 11px; padding: 4px 10px;" data-i18n="settings.claude_desktop.select_none">Keine</button>
+                            <button id="claudeDesktopMcpSaveBtn" class="settings-btn primary" onclick="saveClaudeDesktopMcps()" style="font-size: 11px; padding: 4px 10px; margin-left: auto; display: none;">
+                                <span class="material-icons" style="font-size: 14px; vertical-align: middle; margin-right: 2px;">save</span> <span data-i18n="settings.claude_desktop.save">Speichern</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Info -->
+                    <div style="font-size: 11px; color: var(--text-muted); padding: 8px; background: var(--bg-secondary); border-radius: 6px;">
+                        <span class="material-icons" style="font-size: 14px; vertical-align: middle;">info</span>
+                        <span data-i18n="settings.claude_desktop.info">DeskAgent wird als lokaler MCP-Server in Claude Desktop registriert. Nach dem Einrichten Claude Desktop neu starten.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-split-layout">
+                <div class="settings-split-left">
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                            <span class="material-icons">link</span>
+                            <h4 data-i18n="settings.integrations.title">Verbundene Dienste</h4>
+                        </div>
+                        <div class="settings-card-content">
+                            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;" data-i18n="settings.integrations.description">
+                                Verbinde externe Dienste um deren Daten in Agents zu nutzen.
+                            </p>
+                            <div id="oauthProvidersList" class="oauth-providers-list">
+                                <div class="oauth-loading" data-i18n="settings.integrations.loading">Lade Verbindungen...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-split-right">
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                            <span class="material-icons">help_outline</span>
+                            <h4 data-i18n="settings.integrations.help_title">Hinweise</h4>
+                        </div>
+                        <div class="settings-card-content">
+                            <div style="font-size: 12px; color: var(--text-secondary);">
+                                <p style="margin-bottom: 12px;" data-i18n="settings.integrations.help_oauth" data-i18n-html>
+                                    <strong>OAuth-Verbindung:</strong> Klicke auf "Verbinden" um dich beim Dienst anzumelden.
+                                    Du wirst zur Login-Seite des Anbieters weitergeleitet.
+                                </p>
+                                <p style="margin-bottom: 12px;" data-i18n="settings.integrations.help_api_key" data-i18n-html>
+                                    <strong>API-Schluessel:</strong> Trage deinen API-Key ein um den Dienst zu nutzen. Die Daten werden lokal gespeichert.
+                                </p>
+                                <p style="margin-bottom: 12px;" data-i18n="settings.integrations.help_credentials" data-i18n-html>
+                                    <strong>Zugangsdaten:</strong> Trage Benutzername und Passwort ein. Die Daten werden verschluesselt lokal gespeichert.
+                                </p>
+                                <p data-i18n="settings.integrations.help_local" data-i18n-html>
+                                    <strong>Lokale Dienste:</strong> Diese Dienste laufen auf deinem Computer und benoetigen keine Konfiguration.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{SETTINGS_DEV_TAB_CONTENT}}
+
+    </div>
+</div>
+
+<!-- Agent Editor Dialog (Expert Mode) -->
+<div id="agentEditorDialog" class="dialog-overlay hidden">
+    <div class="agent-editor-modal">
+        <div class="editor-header">
+            <h3 id="editorAgentName">Edit: agent_name</h3>
+            <button class="close-btn" onclick="closeAgentEditor()">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+        <div class="editor-info">
+            <span id="editorSource" class="source-badge user">User</span>
+            <span id="editorPath" class="editor-path"></span>
+        </div>
+        <textarea id="agentEditorContent" spellcheck="false" placeholder="Loading..."></textarea>
+        <div class="editor-footer">
+            <button onclick="closeAgentEditor()" class="btn-secondary">Cancel</button>
+            <button onclick="saveAgentContent()" id="btnSaveAgent" style="background: #22c55e !important; color: white !important; display: inline-flex !important; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 8px; border: none; font-weight: 500; cursor: pointer;">
+                <span class="material-icons">save</span> Save
+            </button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,60 @@
+DeskAgent
+Copyright (C) 2026 realvirtual GmbH
+Licensed under the GNU Affero General Public License v3.0 with Plugin
+Exception. See LICENSE for the full text.
+
+For commercial licensing options that remove AGPL-3.0 obligations,
+contact info@realvirtual.io.
+
+------------------------------------------------------------------------
+                       Third-Party Notices
+------------------------------------------------------------------------
+
+DeskAgent depends on a number of third-party libraries. The following
+list highlights the major direct dependencies and their licenses. A
+complete, up-to-date list of all transitive dependencies and their
+license texts can be generated using the helper script
+`scripts/collect_licenses.py` and is shipped with binary distributions.
+
+  Anthropic Python SDK (anthropic)            MIT
+  Google GenAI SDK (google-genai)             Apache 2.0
+  OpenAI Python (openai)                      Apache 2.0
+  Model Context Protocol SDK (mcp)            MIT
+  FastAPI                                     MIT
+  Uvicorn                                     BSD-3-Clause
+  Pydantic                                    MIT
+  pypdf                                       BSD-3-Clause
+  openpyxl                                    MIT
+  pywin32                                     PSF
+  pystray                                     LGPLv3
+  Pillow                                      HPND
+  requests                                    Apache 2.0
+  keyboard                                    MIT
+
+Optional extras (installed via `pip install deskagent[<extra>]`):
+
+  [anonymizer]
+    presidio-analyzer                         MIT
+    presidio-anonymizer                       MIT
+    spaCy                                     MIT
+
+  [claude-sdk]
+    claude-agent-sdk                          MIT
+    (note: bundles a proprietary `claude.exe` binary from Anthropic;
+     not installed by default for this reason)
+
+------------------------------------------------------------------------
+                       AGPL-3.0 Compatibility
+------------------------------------------------------------------------
+
+All direct dependencies listed above are compatible with AGPL-3.0:
+
+- MIT, BSD, Apache 2.0, PSF, HPND: permissive, can be combined with
+  AGPL code without imposing additional obligations on the AGPL parts.
+- LGPLv3 (pystray): explicitly compatible with AGPLv3 per the GNU
+  License Compatibility Matrix. In source distributions and pip
+  installs, pystray is loaded dynamically, preserving its LGPL
+  obligations independently.
+
+If you find a license-compatibility issue with a current or future
+dependency, please report it via GitHub Issues or to info@realvirtual.io.

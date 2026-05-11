@@ -1,0 +1,140 @@
+{
+  "name": "DeskAgent - Your Desktop. Your Agent.",
+  "context": "",
+  "language": "de",
+  "server_port": 8765,
+  "console_logging": false,
+  "developer_mode": false,
+  "global_ai_override": null,
+  "content_mode": "demo",
+  "clear_temp_on_start": true,
+  "ui": {
+    "title": "DeskAgent",
+    "icon": "icon.ico",
+    "accent_color": "#2196f3",
+    "theme": "light",
+    "use_webview": false,
+    "auto_open_browser": true,
+    "webview_width": 450,
+    "webview_height": 800,
+    "show_content_mode_selector": true,
+    "webview_hotkey": "ctrl+alt+space"
+  },
+  "anonymization": {
+    "enabled": false,
+    "pii_types": [
+      "PERSON",
+      "EMAIL_ADDRESS",
+      "PHONE_NUMBER",
+      "LOCATION",
+      "ADDRESS",
+      "URL",
+      "COMPANY_ID",
+      "ORGANIZATION",
+      "IBAN_CODE"
+    ],
+    "language": "de",
+    "log_anonymization": false,
+    "placeholder_format": "<{entity_type}_{index}>",
+    "known_persons": [],
+    "known_companies": []
+  },
+  "agent_logging": {
+    "enabled": true,
+    "max_files": 20,
+    "max_content_length": 50000,
+    "system_log_full_content": false
+  },
+  "anonymization_proxy": {
+    "no_anonymize_output": [
+      "list_mail_folders",
+      "get_articles",
+      "search_article",
+      "get_today_events",
+      "get_upcoming_events"
+    ],
+    "no_deanonymize_input": [
+      "open_url",
+      "open_url_new_tab",
+      "open_url_new_window"
+    ]
+  },
+  "email_watchers": {
+    "enabled": false,
+    "check_interval": 60,
+    "max_emails_per_check": 20,
+    "rules": []
+  },
+  "github_repository": "",
+  "startup_mode": "background",
+  "streamdeck_path": "",
+  "browser_integration": {
+    "enabled": true,
+    "auto_start": "startup",
+    "browser": "chrome",
+    "port": 9222,
+    "separate_profile": true,
+    "require_consent": true
+  },
+  "voice_input": {
+    "enabled": true,
+    "language": "de",
+    "auto_submit": true,
+    "hotkey": "Ctrl+M",
+    "dictate_hotkey": "ctrl+shift+space",
+    "dictate_hotkey_enter": "ctrl+shift+enter",
+    "agent_hotkey": "ctrl+shift+backspace",
+    "outlook_agent": "reply_email",
+    "prompt": "DeskAgent",
+    "max_recording_seconds": 300,
+    "start_beep_enabled": true,
+    "start_beep_frequency": 880,
+    "start_beep_duration_ms": 200,
+    "start_beep_volume": 0.25,
+    "stop_beep_enabled": true,
+    "stop_beep_frequency": 660,
+    "stop_beep_duration_ms": 150,
+    "stop_beep_volume": 0.25,
+    "indicator_sound_enabled": false,
+    "indicator_sound_volume": 0.3,
+    "indicator_sound_frequency": 880,
+    "indicator_sound_pulse_ms": 150,
+    "indicator_sound_pause_ms": 2000
+  },
+  "interaction": {
+    "confirmation_timeout": 3600
+  },
+  "security": {
+    "prompt_injection_protection": true,
+    "wrap_external_content": true,
+    "log_suspicious_patterns": true
+  },
+  "branding": {
+    "company_name": "",
+    "industry": "",
+    "assistant_intro": "",
+    "language": "de"
+  },
+  "app": {
+    "copyright": "\u00a9 DeskAgent Community",
+    "doc_url": "https://doc.deskagent.de",
+    "license_url": "https://deskagent.de/license.html",
+    "licenses_url": "https://deskagent.de/licenses.html",
+    "privacy_url": "https://deskagent.de/datenschutz.html",
+    "order_url": "",
+    "support_email": "ask@deskagent.de",
+    "portal_url": "",
+    "license_api_url": "",
+    "releases_url": "",
+    "github_repo": "deskagent-ai/community"
+  },
+  "api": {
+    "internal_docs_enabled": false,
+    "api_key": null
+  },
+  "claude_desktop": {
+    "hub_enabled": false,
+    "auth_token": "",
+    "port": 19001
+  }
+}

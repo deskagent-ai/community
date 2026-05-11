@@ -1,0 +1,15 @@
+{
+  "_meta": {
+    "created": "2025-02-06",
+    "backend": "mock",
+    "description": "E-Mail-Antwort Workflow Expectations"
+  },
+  "assertions": {
+    "success": true,
+    "content_contains": [],
+    "content_not_contains": ["Error", "Exception", "Traceback"],
+    "tools_called": ["outlook_get_selected_email"],
+    "tools_not_called": ["billomat_create_invoice"],
+    "cost_usd": 0
+  }
+}

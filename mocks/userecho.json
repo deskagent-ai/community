@@ -1,0 +1,120 @@
+{
+  "userecho_get_recent_new_tickets": {
+    "response_json": {
+      "tickets": [
+        {
+          "id": 12458,
+          "subject": "DeskAgent crashes when processing large PDFs",
+          "description": "When trying to process a PDF with more than 100 pages, DeskAgent crashes with an out-of-memory error. This started happening after the last update.",
+          "status": "open",
+          "priority": "high",
+          "created_at": "{{DAYS_AGO_1}}T11:20:00",
+          "updated_at": "{{DAYS_AGO_1}}T11:20:00",
+          "author": {
+            "name": "Demo Support User",
+            "email": "demo.support@demo-customer.example"
+          },
+          "replies_count": 0
+        },
+        {
+          "id": 12456,
+          "subject": "How to configure MCP servers for Gmail?",
+          "description": "I'm trying to set up the Gmail MCP server but the OAuth2 authentication is not working. I've followed the documentation but keep getting an 'invalid_grant' error.",
+          "status": "open",
+          "priority": "normal",
+          "created_at": "{{DAYS_AGO_2}}T09:45:00",
+          "updated_at": "{{DAYS_AGO_2}}T14:30:00",
+          "author": {
+            "name": "Demo Tech User",
+            "email": "demo.tech@demo-startup.example"
+          },
+          "replies_count": 1
+        },
+        {
+          "id": 12452,
+          "subject": "Feature Request: Dark mode for WebUI",
+          "description": "It would be great to have a dark mode option for the DeskAgent WebUI. The current light theme is too bright for evening work.",
+          "status": "acknowledged",
+          "priority": "low",
+          "created_at": "{{DAYS_AGO_4}}T16:00:00",
+          "updated_at": "{{DAYS_AGO_3}}T10:15:00",
+          "author": {
+            "name": "Demo Feature User",
+            "email": "demo.feature@demo-innovate.example"
+          },
+          "replies_count": 2
+        }
+      ],
+      "total_count": 3
+    }
+  },
+
+  "userecho_get_open_tickets": {
+    "response_json": {
+      "tickets": [
+        {
+          "id": 12458,
+          "subject": "DeskAgent crashes when processing large PDFs",
+          "status": "open",
+          "priority": "high",
+          "created_at": "{{DAYS_AGO_1}}T11:20:00",
+          "author": {
+            "name": "Demo Support User",
+            "email": "demo.support@demo-customer.example"
+          },
+          "replies_count": 0
+        },
+        {
+          "id": 12456,
+          "subject": "How to configure MCP servers for Gmail?",
+          "status": "open",
+          "priority": "normal",
+          "created_at": "{{DAYS_AGO_2}}T09:45:00",
+          "author": {
+            "name": "Demo Tech User",
+            "email": "demo.tech@demo-startup.example"
+          },
+          "replies_count": 1
+        },
+        {
+          "id": 12452,
+          "subject": "Feature Request: Dark mode for WebUI",
+          "status": "acknowledged",
+          "priority": "low",
+          "created_at": "{{DAYS_AGO_4}}T16:00:00",
+          "author": {
+            "name": "Demo Feature User",
+            "email": "demo.feature@demo-innovate.example"
+          },
+          "replies_count": 2
+        }
+      ],
+      "total_count": 3
+    }
+  },
+
+  "userecho_get_ticket": {
+    "variants": [
+      {
+        "match_args": {"ticket_id": 12458},
+        "response_json": {
+          "id": 12458,
+          "subject": "DeskAgent crashes when processing large PDFs",
+          "description": "When trying to process a PDF with more than 100 pages, DeskAgent crashes with an out-of-memory error. This started happening after the last update.\n\nSteps to reproduce:\n1. Open DeskAgent\n2. Select a PDF with 100+ pages\n3. Run any agent that processes the PDF\n\nExpected: PDF should be processed\nActual: Application crashes with OOM error\n\nSystem: Windows 11, 16GB RAM, DeskAgent v0.6.1",
+          "status": "open",
+          "priority": "high",
+          "created_at": "{{DAYS_AGO_1}}T11:20:00",
+          "updated_at": "{{DAYS_AGO_1}}T11:20:00",
+          "author": {
+            "name": "Demo Support User",
+            "email": "demo.support@demo-customer.example"
+          },
+          "comments": []
+        }
+      }
+    ],
+    "fallback_response_json": {
+      "error": "Ticket not found"
+    }
+  }
+}

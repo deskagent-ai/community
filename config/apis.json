@@ -1,0 +1,69 @@
+{
+  "_comment": "API Keys for external services - AI backend keys go in backends.json",
+  "_note": "Set 'enabled: false' to disable any MCP",
+  "outlook": { "enabled": true },
+  "clipboard": { "enabled": true },
+  "browser": { "enabled": true },
+  "filesystem": { "enabled": true },
+  "pdf": { "enabled": true },
+  "knowledge": { "enabled": true },
+  "project": { "enabled": true },
+  "billomat": {
+    "enabled": false,
+    "id": "",
+    "api_key": "",
+    "app_id": "",
+    "app_secret": ""
+  },
+  "lexware": {
+    "enabled": true,
+    "api_key": "",
+    "log_api": false
+  },
+  "userecho": {
+    "enabled": true,
+    "subdomain": "",
+    "api_key": ""
+  },
+  "msgraph": {
+    "enabled": true,
+    "client_id": "",
+    "tenant_id": "common",
+    "webhooks": {}
+  },
+  "ecodms": {
+    "enabled": true,
+    "url": "",
+    "username": "",
+    "password": "",
+    "api_key": "",
+    "archive_id": ""
+  },
+  "gmail": {
+    "enabled": true,
+    "client_id": "",
+    "client_secret": "",
+    "redirect_port": 8080
+  },
+  "imap": {
+    "enabled": false,
+    "imap_host": "imap.example.com",
+    "imap_port": 993,
+    "imap_user": "user@example.com",
+    "imap_password": "",
+    "imap_ssl": true,
+    "smtp_host": "smtp.example.com",
+    "smtp_port": 587,
+    "smtp_user": "user@example.com",
+    "smtp_password": "",
+    "smtp_tls": true
+  },
+  "paperless": {
+    "enabled": true,
+    "url": "http://localhost:8000",
+    "token": "",
+    "username": "admin",
+    "password": "password",
+    "api_version": 5
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "Name": "DeskAgent",
+  "Description": "Run DeskAgent skills and agents with visual feedback",
+  "Author": "DeskAgent Community",
+  "Version": "1.2.1",
+  "Category": "DeskAgent",
+  "CategoryIcon": "images/category",
+  "Icon": "images/icon",
+  "URL": "https://github.com/deskagent-ai/community",
+  "CodePath": "plugin.html",
+  "PropertyInspectorPath": "property-inspector.html",
+  "DefaultWindowSize": [500, 250],
+  "Actions": [
+    {
+      "Name": "Run Skill",
+      "UUID": "com.deskagent.cli.runskill",
+      "Icon": "images/action",
+      "Tooltip": "Run an AI Assistant skill (clipboard-based)",
+      "States": [
+        {
+          "Image": "images/action",
+          "TitleAlignment": "bottom"
+        }
+      ],
+      "PropertyInspectorPath": "property-inspector.html"
+    },
+    {
+      "Name": "Run Agent",
+      "UUID": "com.deskagent.cli.runagent",
+      "Icon": "images/action",
+      "Tooltip": "Run an AI Agent with MCP tools (e.g. Outlook)",
+      "States": [
+        {
+          "Image": "images/action",
+          "TitleAlignment": "bottom"
+        }
+      ],
+      "PropertyInspectorPath": "property-inspector.html"
+    }
+  ],
+  "OS": [
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Software": {
+    "MinimumVersion": "6.0"
+  },
+  "SDKVersion": 2,
+  "ApplicationsToMonitor": {
+    "windows": []
+  }
+}

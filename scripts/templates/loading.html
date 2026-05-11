@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeskAgent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #ffffff;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #1a1a2e;
+                color: #e5e5e5;
+            }
+            .startup-status {
+                color: #a0a0a0;
+            }
+        }
+
+        .startup-card {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .startup-spinner {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 1.5rem;
+            border: 3px solid #e5e5e6;
+            border-top-color: #2196f3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .startup-spinner {
+                border-color: #3a3a4e;
+                border-top-color: #2196f3;
+            }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .startup-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: #343541;
+            margin-bottom: 0.75rem;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .startup-title {
+                color: #e5e5e5;
+            }
+        }
+
+        .startup-status {
+            color: #6e6e80;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="startup-card">
+        <div class="startup-spinner"></div>
+        <div class="startup-title">DeskAgent</div>
+        <div class="startup-status" id="status">Starting...</div>
+    </div>
+
+    <!-- Navigation is controlled by pywebview Python code -->
+</body>
+</html>

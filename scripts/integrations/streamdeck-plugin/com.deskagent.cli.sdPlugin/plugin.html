@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Assistant Plugin</title>
+</head>
+<body>
+<script>
+// AI Assistant Plugin v1.2.1
+var websocket = null;
+var pluginUUID = null;
+var actionContexts = {};
+var isRegistered = false;
+
+function log(message) {
+    console.log('[AI Assistant] ' + message);
+    // Only send to Stream Deck AFTER registration is complete
+    if (isRegistered && websocket && websocket.readyState === WebSocket.OPEN) {
+        websocket.send(JSON.stringify({
+            event: 'logMessage',
+            payload: { message: '[AI Assistant] ' + message }
+        }));
+    }
+}
+
+function sendToStreamDeck(event, context, payload) {
+    if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+        log('ERROR: WebSocket not ready');
+        return;
+    }
+
+    var message = { event: event, context: context };
+    if (payload) {
+        message.payload = payload;
+    }
+
+    log('Sending: ' + JSON.stringify(message));
+    websocket.send(JSON.stringify(message));
+}
+
+function showFeedback(context, type) {
+    log('showFeedback called: type=' + type + ', context=' + context);
+
+    if (type === 'ok') {
+        sendToStreamDeck('showOk', context);
+    } else if (type === 'alert') {
+        sendToStreamDeck('showAlert', context);
+    }
+}
+
+function setTitle(context, title) {
+    log('setTitle called: title=' + title);
+    sendToStreamDeck('setTitle', context, {
+        title: title,
+        target: 0,
+        state: 0
+    });
+}
+
+function setImage(context, imagePath) {
+    log('setImage called: imagePath=' + imagePath);
+    sendToStreamDeck('setImage', context, {
+        image: imagePath,
+        target: 0,
+        state: 0
+    });
+}
+
+function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, inInfo) {
+    pluginUUID = inPluginUUID;
+    log('Connecting to port ' + inPort + ', UUID: ' + inPluginUUID);
+
+    websocket = new WebSocket('ws://127.0.0.1:' + inPort);
+
+    websocket.onopen = function() {
+        // IMPORTANT: Registration MUST be the first message sent!
+        websocket.send(JSON.stringify({
+            event: inRegisterEvent,
+            uuid: inPluginUUID
+        }));
+
+        // Now we can enable logging
+        isRegistered = true;
+        log('Plugin registered successfully');
+    };
+
+    websocket.onerror = function(error) {
+        log('WebSocket error: ' + JSON.stringify(error));
+    };
+
+    websocket.onclose = function(event) {
+        log('WebSocket closed: code=' + event.code + ', reason=' + event.reason);
+    };
+
+    websocket.onmessage = function(evt) {
+        try {
+            var data = JSON.parse(evt.data);
+            log('Received: ' + data.event);
+
+            switch (data.event) {
+                case 'willAppear':
+                    handleWillAppear(data);
+                    break;
+                case 'willDisappear':
+                    handleWillDisappear(data);
+                    break;
+                case 'keyDown':
+                    handleKeyDown(data);
+                    break;
+                case 'keyUp':
+                    log('keyUp for: ' + data.context);
+                    break;
+                case 'didReceiveSettings':
+                    handleDidReceiveSettings(data);
+                    break;
+                default:
+                    log('Unhandled event: ' + data.event);
+            }
+        } catch (e) {
+            log('Error parsing message: ' + e.message);
+        }
+    };
+}
+
+function handleWillAppear(data) {
+    log('Action appeared: ' + data.action + ', context: ' + data.context);
+    actionContexts[data.context] = {
+        action: data.action,
+        settings: data.payload.settings || {}
+    };
+}
+
+function handleWillDisappear(data) {
+    log('Action disappeared: ' + data.context);
+    delete actionContexts[data.context];
+}
+
+function handleDidReceiveSettings(data) {
+    log('Settings received for: ' + data.context);
+    if (actionContexts[data.context]) {
+        actionContexts[data.context].settings = data.payload.settings || {};
+    }
+}
+
+function handleKeyDown(data) {
+    var context = data.context;
+    var action = data.action;
+    var settings = data.payload.settings || {};
+
+    log('KeyDown - action: ' + action + ', context: ' + context);
+    log('Settings: ' + JSON.stringify(settings));
+
+    // Immediate visual feedback: show processing
+    setTitle(context, '...');
+    setImage(context, 'images/processing.png');
+
+    // Determine what to run
+    var isAgent = action === 'com.deskagent.cli.runagent';
+    var server = settings.server || 'http://localhost:8765';
+    var endpoint, taskName;
+
+    if (isAgent) {
+        taskName = settings.agent || 'reply_email';
+        endpoint = server + '/agent/' + taskName;
+    } else {
+        taskName = settings.skill || 'mail_reply';
+        endpoint = server + '/skill/' + taskName;
+    }
+
+    log('Calling: ' + endpoint);
+
+    // Make the HTTP request (GET, not POST!)
+    fetch(endpoint, { method: 'GET' })
+        .then(function(response) {
+            log('HTTP response status: ' + response.status);
+            return response.json();
+        })
+        .then(function(result) {
+            log('Result: ' + JSON.stringify(result));
+
+            if (result.task_id) {
+                // Task started, poll for completion
+                pollTaskStatus(context, server, result.task_id);
+            } else if (result.status === 'ok' || result.result) {
+                // Immediate success
+                showSuccess(context);
+            } else {
+                showError(context);
+            }
+        })
+        .catch(function(error) {
+            log('Fetch error: ' + error.message);
+            showError(context);
+        });
+}
+
+function pollTaskStatus(context, server, taskId) {
+    log('Polling task: ' + taskId);
+
+    fetch(server + '/task/' + taskId)
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
+            log('Task status: ' + result.status);
+
+            if (result.status === 'running') {
+                setTimeout(function() {
+                    pollTaskStatus(context, server, taskId);
+                }, 1000);
+            } else if (result.status === 'done') {
+                showSuccess(context);
+            } else {
+                showError(context);
+            }
+        })
+        .catch(function(error) {
+            log('Poll error: ' + error.message);
+            showError(context);
+        });
+}
+
+function showSuccess(context) {
+    log('Showing success for: ' + context);
+    setImage(context, 'images/success.png');
+    setTitle(context, 'OK');
+    showFeedback(context, 'ok');
+
+    // Reset after delay
+    setTimeout(function() {
+        resetButton(context);
+    }, 2000);
+}
+
+function showError(context) {
+    log('Showing error for: ' + context);
+    setImage(context, 'images/error.png');
+    setTitle(context, 'ERR');
+    showFeedback(context, 'alert');
+
+    // Reset after delay
+    setTimeout(function() {
+        resetButton(context);
+    }, 3000);
+}
+
+function resetButton(context) {
+    log('Resetting button: ' + context);
+    setImage(context, 'images/action.png');
+    setTitle(context, '');
+}
+</script>
+</body>
+</html>

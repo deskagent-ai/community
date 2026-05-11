@@ -1,0 +1,120 @@
+{
+  "_comment": "Event triggers for automated agent/workflow execution - EXAMPLES ONLY",
+  "_note": "Copy to your workspace config/triggers.json and customize",
+  "_action_types": "trigger_agent (direct agent call) OR trigger_workflow (uses workflow engine)",
+  "example_gmail_workflow": {
+    "type": "email_watcher",
+    "name": "Gmail Auto-Reply with Workflow (Recommended)",
+    "enabled": false,
+    "provider": "gmail",
+    "poll_interval": 60,
+    "lookback_days": 1,
+    "max_emails_per_check": 20,
+    "_comment": "Uses workflow engine: tag → blocklist check → agent → tag done",
+    "labels": {
+      "done": "IsDone",
+      "pending": "Ask",
+      "inprogress": "InProgress",
+      "spam": "Spam"
+    },
+    "rules": [
+      {
+        "name": "DeskAgent Support",
+        "enabled": true,
+        "match": {
+          "to_pattern": "ask@deskagent\\.de"
+        },
+        "actions": [
+          {
+            "type": "trigger_workflow",
+            "workflow": "workflow_email_reply",
+            "agent": "deskagent_support_reply",
+            "include_body": true
+          }
+        ]
+      }
+    ]
+  },
+  "example_teams_channel": {
+    "type": "teams_channel",
+    "name": "Teams Channel Watcher Example",
+    "enabled": false,
+    "team_id": "YOUR_TEAM_ID",
+    "channel_id": "YOUR_CHANNEL_ID",
+    "poll_interval": 10,
+    "response_webhook": "deskagent",
+    "agent": "chat",
+    "_setup": "Run teams_setup_watcher('channel_name') to auto-fill IDs"
+  },
+  "example_gmail_watcher": {
+    "type": "email_watcher",
+    "name": "Gmail Auto-Reply Example",
+    "enabled": false,
+    "provider": "gmail",
+    "poll_interval": 60,
+    "lookback_days": 1,
+    "max_emails_per_check": 20,
+    "mark_processed_as_read": false,
+    "_comment": "Watches Gmail inbox and triggers agent on matching emails",
+    "labels": {
+      "done": "IsDone",
+      "pending": "Ask",
+      "inprogress": "InProgress",
+      "spam": "Spam"
+    },
+    "rules": [
+      {
+        "name": "Support Requests",
+        "enabled": true,
+        "match": {
+          "to_pattern": "support@yourdomain\\.com",
+          "subject_pattern": "(help|support|question)"
+        },
+        "actions": [
+          {
+            "type": "trigger_agent",
+            "agent": "your_reply_agent",
+            "auto_send": false,
+            "include_body": true,
+            "reply_all": false
+          }
+        ]
+      }
+    ]
+  },
+  "example_msgraph_watcher": {
+    "type": "email_watcher",
+    "name": "Office 365 Auto-Reply Example",
+    "enabled": false,
+    "provider": "msgraph",
+    "mailbox": "shared@yourdomain.com",
+    "poll_interval": 60,
+    "lookback_days": 1,
+    "max_emails_per_check": 20,
+    "_comment": "Watches Office 365 mailbox via MS Graph API",
+    "labels": {
+      "done": "IsDone",
+      "pending": "Ask",
+      "inprogress": "InProgress",
+      "spam": "Spam"
+    },
+    "rules": [
+      {
+        "name": "Invoice Requests",
+        "enabled": true,
+        "match": {
+          "from_pattern": "@supplier\\.com$",
+          "subject_pattern": "(invoice|rechnung)"
+        },
+        "actions": [
+          {
+            "type": "trigger_agent",
+            "agent": "process_invoice",
+            "auto_send": false,
+            "include_body": true
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "db_contains": {
+    "response": "false"
+  },
+
+  "db_add": {
+    "response": "Value added to collection successfully."
+  },
+
+  "db_remove": {
+    "response": "Value removed from collection successfully."
+  },
+
+  "db_list": {
+    "response_json": {
+      "collection": "demo_collection",
+      "values": ["demo_value_1", "demo_value_2", "demo_value_3"],
+      "count": 3
+    }
+  },
+
+  "db_clear": {
+    "response": "Collection cleared successfully."
+  },
+
+  "db_get": {
+    "response_json": {
+      "key": "demo_key",
+      "value": "demo_value"
+    }
+  },
+
+  "db_set": {
+    "response": "Key-value pair saved successfully."
+  },
+
+  "db_delete": {
+    "response": "Key deleted successfully."
+  },
+
+  "db_keys": {
+    "response_json": {
+      "keys": ["demo_key_1", "demo_key_2", "demo_key_3"]
+    }
+  },
+
+  "db_increment": {
+    "response_json": {
+      "key": "demo_counter",
+      "value": 42
+    }
+  },
+
+  "db_decrement": {
+    "response_json": {
+      "key": "demo_counter",
+      "value": 41
+    }
+  },
+
+  "db_get_counter": {
+    "response_json": {
+      "key": "demo_counter",
+      "value": 42
+    }
+  },
+
+  "db_reset_counter": {
+    "response": "Counter reset to 0."
+  },
+
+  "db_append": {
+    "response": "Value appended to list successfully."
+  },
+
+  "db_get_list": {
+    "response_json": {
+      "key": "demo_list",
+      "values": ["item1", "item2", "item3"]
+    }
+  },
+
+  "db_list_collections": {
+    "response_json": {
+      "collections": ["blocked_senders", "processed_emails", "demo_collection"]
+    }
+  },
+
+  "db_collection_count": {
+    "response_json": {
+      "collection": "demo_collection",
+      "count": 3
+    }
+  },
+
+  "db_search": {
+    "response_json": {
+      "results": [
+        {"key": "demo_key_1", "value": "matching value 1"},
+        {"key": "demo_key_2", "value": "matching value 2"}
+      ],
+      "count": 2
+    }
+  },
+
+  "db_export": {
+    "response_json": {
+      "exported": true,
+      "path": "workspace/exports/demo_export.json",
+      "records": 10
+    }
+  },
+
+  "db_import": {
+    "response_json": {
+      "imported": true,
+      "records": 10
+    }
+  }
+}

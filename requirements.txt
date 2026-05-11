@@ -1,0 +1,99 @@
+# =============================================================================
+# AI Assistant - Dependencies
+# =============================================================================
+# This file is used by installer/build.bat to install all packages.
+# Add new dependencies here - they will be included in the next installer build.
+# =============================================================================
+
+# --- Core (Platform-specific) ---
+pywin32>=306; sys_platform == 'win32'
+keyboard>=0.13.5; sys_platform == 'win32'
+pystray>=0.19.5  # Cross-platform (Windows, macOS, Linux)
+pywebview>=5.0; sys_platform == 'win32'
+Pillow>=10.0.0
+requests>=2.31.0
+psutil>=5.9.0
+
+# --- Voice Input (System-wide Hotkey) ---
+sounddevice>=0.4.6
+soundfile>=0.12.1
+numpy>=1.24.0
+pyperclip>=1.8.2
+
+# --- FastAPI + SSE ---
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+sse-starlette>=1.8.0
+python-multipart>=0.0.6
+
+# --- MCP Framework ---
+mcp>=1.0.0
+websockets>=12.0  # transitiv via google-genai, direkt genutzt durch plugins/
+
+# --- Claude Agent SDK ---
+# NOTE: claude-agent-sdk is an OPTIONAL dependency for the AGPL/Community
+# edition. It bundles a proprietary `claude` binary (Anthropic Commercial
+# Terms) and is therefore declared as an `extras_require` entry in
+# pyproject.toml ([claude-sdk]). Install via:
+#     pip install "deskagent[claude-sdk]"
+# The Python wrapper (`scripts/ai_agent/claude_agent_sdk.py`) imports the
+# SDK lazily and degrades gracefully if it is missing.
+
+# --- Claude API (direct) ---
+anthropic>=0.39.0,<0.77.0  # Pinned - 0.77.1 has FastAPI/pydantic bug (Issue #1160)
+
+# --- Google Gemini ---
+google-genai>=0.5.0
+
+# --- OpenAI API ---
+openai>=1.0.0
+
+# --- Qwen Agent (with MCP) ---
+qwen-agent[mcp]>=0.0.10
+
+# --- Presidio Anonymization (OPTIONAL) ---
+# NOTE: Presidio + spaCy add ~500MB of language models and are an OPTIONAL
+# dependency for the AGPL/Community edition. Install via:
+#     pip install "deskagent[anonymizer]"
+# See pyproject.toml [project.optional-dependencies].
+# The runtime module `scripts/ai_agent/anonymizer.py` degrades gracefully
+# when the anonymizer subprocess / presidio is missing.
+
+# --- PDF Processing ---
+pypdf>=4.0.0
+pypdfium2>=4.0.0  # PDF rendering for Vision LLM OCR (BSD-3 license)
+
+# --- Excel Processing ---
+openpyxl>=3.1.0
+
+# --- File Watching ---
+watchdog>=3.0.0
+
+# --- Testing (E2E) ---
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
+pytest-playwright>=0.5.0
+playwright>=1.40.0
+aiohttp>=3.9.0
+
+# --- Microsoft Graph API ---
+msal>=1.28.0
+
+# --- Google APIs (Gmail, Calendar) ---
+google-auth>=2.0.0
+google-auth-oauthlib>=1.0.0
+google-api-python-client>=2.0.0
+
+# --- Build Tools (Nuitka Distribution) ---
+# Note: Only needed for building compiled distributions
+# nuitka>=2.0
+# ordered-set>=4.1.0
+
+# =============================================================================
+# Note: spaCy + presidio are now optional - install via the [anonymizer] extra
+# defined in pyproject.toml:
+#   pip install "deskagent[anonymizer]"
+# After installation, download the spaCy language models:
+#   python -m spacy download de_core_news_lg
+#   python -m spacy download en_core_web_lg
+# =============================================================================

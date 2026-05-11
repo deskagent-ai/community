@@ -1,0 +1,54 @@
+{
+  "_comment": "DeskAgent default settings for Claude Agent SDK",
+  "_doc": "Diese Datei wird an Claude Code übergeben (settings Parameter)",
+
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(python:*)",
+      "Bash(py:*)",
+      "Bash(pip:*)",
+      "Bash(npm:*)",
+      "Bash(node:*)",
+      "Bash(dir:*)",
+      "Bash(ls:*)",
+      "Bash(tree:*)",
+      "Bash(cat:*)",
+      "Bash(type:*)",
+      "Bash(echo:*)",
+      "Bash(cd:*)",
+      "Bash(where:*)",
+      "Bash(which:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(wc:*)"
+    ],
+    "ask": [
+      "Bash(rm:*)",
+      "Bash(del:*)",
+      "Bash(rmdir:*)",
+      "Bash(mv:*)",
+      "Bash(move:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(powershell:*)",
+      "Bash(cmd:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(rm -rf ~)",
+      "Bash(format:*)",
+      "Bash(mkfs:*)",
+      "Bash(dd if=:*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Read(**/.git/config)",
+      "Read(**/credentials*)",
+      "Read(**/*password*)",
+      "Read(**/*secret*)"
+    ]
+  }
+}

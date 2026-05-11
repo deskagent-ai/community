@@ -1,0 +1,157 @@
+{
+  "default_ai": "gemini",
+  "max_context_turns": 30,
+  "ai_backends": {
+    "claude_sdk": {
+      "type": "claude_agent_sdk",
+      "model": "claude-opus-4-6",
+      "timeout": 300,
+      "anonymize": true,
+      "mcp_transport": "inprocess",
+      "pricing": {
+        "input": 15,
+        "output": 75
+      }
+    },
+    "gemini": {
+      "type": "gemini_adk",
+      "model": "gemini-2.5-pro",
+      "timeout": 300,
+      "temperature": 0.7,
+      "thinking_budget": 8192,
+      "anonymize": true,
+      "pricing": {
+        "input": 1.25,
+        "output": 10
+      },
+      "max_tokens": 8192
+    },
+    "claude": {
+      "type": "claude_cli",
+      "enabled": false,
+      "timeout": 120,
+      "anonymize": true,
+      "pricing": {
+        "input": 3,
+        "output": 15
+      }
+    },
+    "claude_api": {
+      "type": "claude_api",
+      "model": "claude-sonnet-4-5-20250929",
+      "timeout": 180,
+      "prompt_caching": true,
+      "extended_thinking": false,
+      "thinking_budget": 10000,
+      "anonymize": true,
+      "pricing": {
+        "input": 3,
+        "output": 15
+      }
+    },
+    "claude_opus": {
+      "type": "claude_api",
+      "model": "claude-opus-4-5-20251101",
+      "timeout": 300,
+      "prompt_caching": true,
+      "extended_thinking": true,
+      "thinking_budget": 16000,
+      "anonymize": true,
+      "pricing": {
+        "input": 15,
+        "output": 75
+      }
+    },
+    "gemini_3": {
+      "type": "gemini_adk",
+      "model": "gemini-3.1-pro-preview",
+      "timeout": 300,
+      "temperature": 0.7,
+      "thinking_budget": 8192,
+      "anonymize": true,
+      "pricing": {
+        "input": 2,
+        "output": 12
+      },
+      "max_tokens": 8192
+    },
+    "gemini_3_flash": {
+      "type": "gemini_adk",
+      "model": "gemini-3.1-flash-preview",
+      "timeout": 300,
+      "temperature": 0.7,
+      "thinking_budget": 8192,
+      "anonymize": true,
+      "pricing": {
+        "input": 0.50,
+        "output": 3
+      },
+      "max_tokens": 8192
+    },
+    "qwen": {
+      "type": "qwen_agent",
+      "enabled": false,
+      "base_url": "http://localhost:11434",
+      "model": "qwen3:30b",
+      "timeout": 180,
+      "anonymize": false,
+      "pricing": {
+        "input": 0,
+        "output": 0
+      }
+    },
+    "qwen_native": {
+      "type": "ollama_native",
+      "enabled": false,
+      "base_url": "http://localhost:11434",
+      "model": "qwen3:8b",
+      "timeout": 180,
+      "thinking_mode": true,
+      "anonymize": false,
+      "pricing": {
+        "input": 0,
+        "output": 0
+      }
+    },
+    "mistral_local": {
+      "type": "ollama_native",
+      "enabled": false,
+      "base_url": "http://localhost:11434",
+      "model": "mistral-nemo",
+      "timeout": 180,
+      "thinking_mode": false,
+      "anonymize": false,
+      "pricing": {
+        "input": 0,
+        "output": 0
+      }
+    },
+    "openai": {
+      "type": "openai_api",
+      "api_key": "YOUR_OPENAI_API_KEY",
+      "model": "gpt-5",
+      "timeout": 120,
+      "temperature": 0.7,
+      "max_tokens": 4096,
+      "anonymize": true,
+      "pricing": {
+        "input": 1.25,
+        "output": 10
+      }
+    },
+    "mistral": {
+      "type": "openai_api",
+      "base_url": "https://api.mistral.ai/v1",
+      "api_key": "YOUR_MISTRAL_API_KEY",
+      "model": "mistral-large-latest",
+      "timeout": 120,
+      "temperature": 0.7,
+      "max_tokens": 4096,
+      "anonymize": true,
+      "pricing": {
+        "input": 2,
+        "output": 6
+      }
+    }
+  }
+}

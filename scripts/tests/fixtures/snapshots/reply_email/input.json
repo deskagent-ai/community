@@ -1,0 +1,6 @@
+{
+  "prompt": "Beantworte die ausgewaehlte E-Mail professionell",
+  "agent": "reply_email",
+  "use_tools": true,
+  "description": "Standard email reply workflow"
+}

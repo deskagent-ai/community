@@ -1,0 +1,58 @@
+# =============================================================================
+# DeskAgent - MCP Server Dependencies
+# =============================================================================
+# These packages are installed into the embedded Python for MCP servers.
+# Used by: buildrelease/build-windows.bat
+#
+# IMPORTANT: Keep this list minimal - only packages needed by MCP servers!
+# The main DeskAgent.exe uses Nuitka-compiled packages separately.
+# =============================================================================
+
+# --- Core MCP Framework ---
+mcp>=1.0.0
+
+# --- AI Backends (for MCP that call AI directly) ---
+anthropic>=0.39.0
+google-genai>=0.5.0
+openai>=1.0.0
+
+# --- HTTP & System ---
+requests>=2.31.0
+pywin32>=306; sys_platform == "win32"
+
+# --- Microsoft Graph API (msgraph MCP) ---
+msal>=1.28.0
+cryptography>=42.0.0  # msal dependency (has C extensions)
+PyJWT>=2.8.0          # msal dependency
+
+# --- Google APIs (gmail MCP) ---
+google-auth>=2.0.0
+google-auth-oauthlib>=1.0.0
+google-api-python-client>=2.0.0
+google-auth-httplib2>=0.2.0
+
+# --- PDF Processing (pdf MCP) ---
+pypdf>=4.0.0
+pypdfium2>=4.0.0
+
+# --- Excel Processing (excel MCP) ---
+openpyxl>=3.1.0
+
+# --- Qwen Backend (local LLM with MCP) ---
+qwen-agent[mcp]>=0.0.10
+
+# --- Anonymization (presidio + spacy) ---
+spacy>=3.7.0
+presidio-analyzer>=2.2.0
+presidio-anonymizer>=2.2.0
+
+# =============================================================================
+# Critical packages that MUST be verified after installation:
+# (used by verify_packages.py)
+# =============================================================================
+# msal          - Microsoft 365 authentication
+# google-auth   - Gmail/Google Calendar
+# anthropic     - Claude API
+# mcp           - MCP framework
+# spacy         - NLP for anonymization
+# =============================================================================

@@ -1,0 +1,42 @@
+{
+  "pinned": {
+    "label": "Pinned",
+    "icon": "push_pin",
+    "order": -1
+  },
+  "chat": {
+    "label": "Chat",
+    "icon": "chat",
+    "order": 0
+  },
+  "kommunikation": {
+    "label": "Kommunikation",
+    "icon": "forum",
+    "order": 2
+  },
+  "finance": {
+    "label": "Finanzen",
+    "icon": "account_balance",
+    "order": 3
+  },
+  "sales": {
+    "label": "Vertrieb & Marketing",
+    "icon": "storefront",
+    "order": 4
+  },
+  "projekte": {
+    "label": "Projekte",
+    "icon": "work",
+    "order": 5
+  },
+  "system": {
+    "label": "System",
+    "icon": "smart_toy",
+    "order": 6
+  },
+  "beta": {
+    "label": "Beta",
+    "icon": "science",
+    "order": 90
+  }
+}

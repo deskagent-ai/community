@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Assistant Settings</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/nickyim/streamdeck-css/streamdeck.css">
+    <style>
+        .sdpi-wrapper { padding: 0 16px; }
+        select { width: 100%; }
+        .loading { color: #888; font-style: italic; }
+        .error { color: #c0392b; }
+    </style>
+</head>
+<body>
+    <div class="sdpi-wrapper">
+        <div class="sdpi-item" id="skillSection">
+            <div class="sdpi-item-label">Skill</div>
+            <select class="sdpi-item-value" id="skill">
+                <option value="">Loading...</option>
+            </select>
+        </div>
+        <div class="sdpi-item" id="agentSection" style="display:none;">
+            <div class="sdpi-item-label">Agent</div>
+            <select class="sdpi-item-value" id="agent">
+                <option value="">Loading...</option>
+            </select>
+        </div>
+        <div class="sdpi-item">
+            <div class="sdpi-item-label">Server</div>
+            <input class="sdpi-item-value" id="server" type="text" value="http://localhost:8765">
+        </div>
+        <div class="sdpi-item">
+            <div class="sdpi-item-label">Status</div>
+            <span id="status" class="sdpi-item-value">-</span>
+        </div>
+    </div>
+
+<script>
+let websocket = null;
+let uuid = null;
+let actionInfo = null;
+let isAgentAction = false;
+const API_BASE = 'http://localhost:8765';
+
+// Skill display names
+const SKILL_NAMES = {
+    'mail_reply': 'E-Mail Antwort',
+    'mail_friendly': 'E-Mail Freundlich',
+    'summarize': 'Zusammenfassen',
+    'translate': 'Übersetzen',
+    'grammar': 'Grammatik',
+    'linkedin': 'LinkedIn',
+    'billomat_customer': 'Billomat Kunde'
+};
+
+// Agent display names
+const AGENT_NAMES = {
+    'reply_email': 'E-Mail Reply (Outlook)',
+    'create_offer': 'Angebot erstellen',
+    'create_invoice': 'Rechnung erstellen',
+    'daily_check': 'Daily Check'
+};
+
+function connectElgatoStreamDeckSocket(inPort, inPropertyInspectorUUID, inRegisterEvent, inInfo, inActionInfo) {
+    uuid = inPropertyInspectorUUID;
+    actionInfo = JSON.parse(inActionInfo);
+
+    // Check if this is an agent action
+    isAgentAction = actionInfo.action === 'com.deskagent.cli.runagent';
+
+    // Show correct section
+    document.getElementById('skillSection').style.display = isAgentAction ? 'none' : 'block';
+    document.getElementById('agentSection').style.display = isAgentAction ? 'block' : 'none';
+
+    websocket = new WebSocket(`ws://127.0.0.1:${inPort}`);
+
+    websocket.onopen = () => {
+        websocket.send(JSON.stringify({
+            event: inRegisterEvent,
+            uuid: uuid
+        }));
+
+        // Load options from server
+        loadOptions();
+
+        // Load saved settings
+        const settings = actionInfo.payload.settings;
+        if (settings?.server) {
+            document.getElementById('server').value = settings.server;
+        }
+        if (settings?.skill && !isAgentAction) {
+            setTimeout(() => {
+                document.getElementById('skill').value = settings.skill;
+            }, 500);
+        }
+        if (settings?.agent && isAgentAction) {
+            setTimeout(() => {
+                document.getElementById('agent').value = settings.agent;
+            }, 500);
+        }
+    };
+
+    websocket.onmessage = (evt) => {
+        const data = JSON.parse(evt.data);
+        if (data.event === 'didReceiveSettings') {
+            const settings = data.payload.settings;
+            if (settings?.skill && !isAgentAction) {
+                document.getElementById('skill').value = settings.skill;
+            }
+            if (settings?.agent && isAgentAction) {
+                document.getElementById('agent').value = settings.agent;
+            }
+            if (settings?.server) {
+                document.getElementById('server').value = settings.server;
+            }
+        }
+    };
+}
+
+async function loadOptions() {
+    const server = document.getElementById('server').value || API_BASE;
+    const statusEl = document.getElementById('status');
+
+    // Helper function for fetch with timeout
+    async function fetchWithTimeout(url, timeoutMs = 3000) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const response = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            return response;
+        } catch (e) {
+            clearTimeout(timeoutId);
+            throw e;
+        }
+    }
+
+    // Show loading state
+    statusEl.textContent = 'Connecting...';
+    statusEl.className = 'loading';
+
+    try {
+        if (isAgentAction) {
+            // Load agents
+            const response = await fetchWithTimeout(`${server}/agents`);
+            const data = await response.json();
+
+            const select = document.getElementById('agent');
+            select.innerHTML = '';
+
+            if (data.agents && data.agents.length > 0) {
+                data.agents.forEach(agent => {
+                    const option = document.createElement('option');
+                    option.value = agent;
+                    option.textContent = AGENT_NAMES[agent] || agent;
+                    select.appendChild(option);
+                });
+                statusEl.textContent = `✓ ${data.agents.length} Agent(s)`;
+                statusEl.className = '';
+            } else {
+                showFallbackAgents();
+                statusEl.textContent = 'No agents found';
+                statusEl.className = 'error';
+            }
+        } else {
+            // Load skills
+            const response = await fetchWithTimeout(`${server}/skills`);
+            const data = await response.json();
+
+            const select = document.getElementById('skill');
+            select.innerHTML = '';
+
+            if (data.skills && data.skills.length > 0) {
+                data.skills.forEach(skill => {
+                    const option = document.createElement('option');
+                    option.value = skill;
+                    option.textContent = SKILL_NAMES[skill] || skill;
+                    select.appendChild(option);
+                });
+                statusEl.textContent = `✓ ${data.skills.length} Skill(s)`;
+                statusEl.className = '';
+            } else {
+                showFallbackSkills();
+                statusEl.textContent = 'No skills found';
+                statusEl.className = 'error';
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load options:', error);
+        statusEl.textContent = 'Server offline - using defaults';
+        statusEl.className = 'error';
+
+        if (isAgentAction) {
+            showFallbackAgents();
+        } else {
+            showFallbackSkills();
+        }
+    }
+}
+
+function showFallbackSkills() {
+    document.getElementById('skill').innerHTML = `
+        <option value="mail_reply">E-Mail Antwort</option>
+        <option value="mail_friendly">E-Mail Freundlich</option>
+        <option value="summarize">Zusammenfassen</option>
+        <option value="translate">Übersetzen</option>
+        <option value="grammar">Grammatik</option>
+        <option value="linkedin">LinkedIn</option>
+        <option value="billomat_customer">Billomat Kunde</option>
+    `;
+}
+
+function showFallbackAgents() {
+    document.getElementById('agent').innerHTML = `
+        <option value="reply_email">E-Mail Reply (Outlook)</option>
+        <option value="create_offer">Angebot erstellen</option>
+        <option value="create_invoice">Rechnung erstellen</option>
+        <option value="daily_check">Daily Check</option>
+    `;
+}
+
+function saveSettings() {
+    const settings = {
+        server: document.getElementById('server').value
+    };
+
+    if (isAgentAction) {
+        settings.agent = document.getElementById('agent').value;
+    } else {
+        settings.skill = document.getElementById('skill').value;
+    }
+
+    websocket?.send(JSON.stringify({
+        event: 'setSettings',
+        context: uuid,
+        payload: settings
+    }));
+}
+
+// Save settings when changed
+document.getElementById('skill').addEventListener('change', saveSettings);
+document.getElementById('agent').addEventListener('change', saveSettings);
+document.getElementById('server').addEventListener('change', () => {
+    saveSettings();
+    loadOptions();
+});
+</script>
+</body>
+</html>

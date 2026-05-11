@@ -1,0 +1,14 @@
+{
+  "name": "deskagent",
+  "version": "1.0.9",
+  "description": "Business productivity tools: Outlook, invoicing (Billomat/Lexware), DMS, SEPA, PDF, Excel and more. DeskAgent acts as MCP Hub providing 15+ business tool servers through a single connection.",
+  "author": {
+    "name": "DeskAgent Community",
+    "url": "https://github.com/deskagent-ai/community"
+  },
+  "homepage": "https://github.com/deskagent-ai/community",
+  "repository": "https://github.com/deskagent-ai/community",
+  "license": "AGPL-3.0",
+  "copyright": "Copyright (C) 2026 realvirtual GmbH",
+  "keywords": ["outlook", "email", "invoicing", "billomat", "lexware", "sepa", "pdf", "excel", "business", "productivity", "dms", "paperless"]
+}

@@ -1,0 +1,87 @@
+{
+  "desk_status": {
+    "response_json": {
+      "status": "running",
+      "version": "0.6.2",
+      "uptime_seconds": 3600,
+      "demo_mode": true,
+      "agents_available": 15,
+      "mcp_servers": 21
+    }
+  },
+
+  "desk_list_agents": {
+    "response_json": {
+      "agents": [
+        {"name": "daily_check", "description": "Tägliche E-Mail-Prüfung", "enabled": true},
+        {"name": "reply_email", "description": "E-Mail beantworten", "enabled": true},
+        {"name": "create_offer", "description": "Angebot erstellen", "enabled": true},
+        {"name": "deskagent_support_reply", "description": "Support Auto-Reply", "enabled": true}
+      ]
+    }
+  },
+
+  "desk_run_agent": {
+    "response_json": {
+      "success": true,
+      "agent": "demo_agent",
+      "task_id": "demo-task-001",
+      "status": "completed",
+      "result": "Agent completed successfully."
+    },
+    "metadata": {
+      "delay_ms": 500
+    }
+  },
+
+  "desk_get_agent_config": {
+    "response_json": {
+      "name": "demo_agent",
+      "ai": "gemini",
+      "allowed_mcp": "gmail|datastore",
+      "enabled": true
+    }
+  },
+
+  "desk_restart": {
+    "response": "DeskAgent is restarting...",
+    "metadata": {
+      "delay_ms": 1000
+    }
+  },
+
+  "desk_get_logs": {
+    "response": "[Demo Log]\n[14:00:00] Agent started\n[14:00:01] Processing request\n[14:00:02] Task completed"
+  },
+
+  "desk_clear_cache": {
+    "response": "Cache cleared successfully."
+  },
+
+  "desk_list_mcp_servers": {
+    "response_json": {
+      "servers": [
+        {"name": "gmail", "tools": 39, "status": "loaded"},
+        {"name": "datastore", "tools": 21, "status": "loaded"},
+        {"name": "desk", "tools": 11, "status": "loaded"}
+      ]
+    }
+  },
+
+  "desk_get_config": {
+    "response_json": {
+      "demo_mode": {"enabled": true},
+      "ui": {"theme": "light"},
+      "voice_input": {"enabled": true}
+    }
+  },
+
+  "desk_list_agent_tools": {
+    "response_json": {
+      "tools": [
+        {"name": "classify_emails", "agent": "email_classifier"},
+        {"name": "extract_invoice", "agent": "invoice_processor"}
+      ]
+    }
+  }
+}

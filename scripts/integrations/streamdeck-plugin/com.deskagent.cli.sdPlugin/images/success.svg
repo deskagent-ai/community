@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
+  <rect width="144" height="144" fill="#27ae60"/>
+  <circle cx="72" cy="60" r="30" fill="#2ecc71"/>
+  <text x="72" y="70" text-anchor="middle" fill="white" font-size="24" font-family="Arial">✓</text>
+  <text x="72" y="115" text-anchor="middle" fill="white" font-size="14" font-family="Arial">Done!</text>
+</svg>

@@ -1,0 +1,340 @@
+{
+  "outlook_get_recent_emails": {
+    "response_json": {
+      "emails": [
+        {
+          "entry_id": "DEMO001",
+          "message_id": "AAMkADemoMessage001",
+          "conversation_id": "CONV001",
+          "subject": "Re: DeskAgent License Inquiry",
+          "from": "demo.user1@demo-company.example",
+          "from_name": "Demo User One",
+          "to": "info@demo-agent.example",
+          "received": "{{HOURS_AGO_2}}",
+          "body_preview": "Sehr geehrte Damen und Herren, wir interessieren uns für eine Unternehmenslizenz von DeskAgent. Könnten Sie uns bitte ein Angebot für 50 Arbeitsplätze zusenden? Mit freundlichen Grüßen, Demo User One",
+          "has_attachments": false,
+          "importance": "normal",
+          "is_read": true,
+          "flag_status": "notFlagged",
+          "categories": [],
+          "folder": "Inbox"
+        },
+        {
+          "entry_id": "DEMO002",
+          "message_id": "AAMkADemoMessage002",
+          "conversation_id": "CONV002",
+          "subject": "Newsletter: KI-Trends 2026 - Die wichtigsten Entwicklungen",
+          "from": "newsletter@demo-newsletter.example",
+          "from_name": "Demo Newsletter",
+          "to": "info@demo-agent.example",
+          "received": "{{HOURS_AGO_5}}",
+          "body_preview": "Die wichtigsten KI-Trends für 2026: Multimodale Modelle, Agent Frameworks und mehr. Klicken Sie hier um den vollständigen Artikel zu lesen...",
+          "has_attachments": false,
+          "importance": "normal",
+          "is_read": false,
+          "flag_status": "notFlagged",
+          "categories": [],
+          "folder": "Inbox"
+        },
+        {
+          "entry_id": "DEMO003",
+          "message_id": "AAMkADemoMessage003",
+          "conversation_id": "CONV003",
+          "subject": "Rechnung Nr. 2026-0042 - Demo Hosting GmbH",
+          "from": "billing@demo-hosting.example",
+          "from_name": "Demo Hosting Billing",
+          "to": "info@demo-agent.example",
+          "received": "{{HOURS_AGO_8}}",
+          "body_preview": "Sehr geehrter Kunde, anbei erhalten Sie Ihre Rechnung Nr. 2026-0042 über EUR 89,90 für den Zeitraum Januar 2026. Bitte begleichen Sie den Betrag innerhalb von 14 Tagen.",
+          "has_attachments": true,
+          "importance": "normal",
+          "is_read": true,
+          "flag_status": "notFlagged",
+          "categories": [],
+          "folder": "Inbox"
+        },
+        {
+          "entry_id": "DEMO004",
+          "message_id": "AAMkADemoMessage004",
+          "conversation_id": "CONV004",
+          "subject": "URGENT: Your account has been compromised - Action Required!",
+          "from": "security-alert@fake-security.example",
+          "from_name": "Fake Security Alert",
+          "to": "info@demo-agent.example",
+          "received": "{{HOURS_AGO_12}}",
+          "body_preview": "URGENT: We detected suspicious activity on your Microsoft account. Click here immediately to verify your identity and prevent account suspension. This is your FINAL WARNING!",
+          "has_attachments": false,
+          "importance": "high",
+          "is_read": false,
+          "flag_status": "notFlagged",
+          "categories": [],
+          "folder": "Inbox"
+        },
+        {
+          "entry_id": "DEMO005",
+          "message_id": "AAMkADemoMessage005",
+          "conversation_id": "CONV005",
+          "subject": "Support-Anfrage: DeskAgent startet nicht nach Windows Update",
+          "from": "demo.user2@demo-corp.example",
+          "from_name": "Demo User Two",
+          "to": "support@demo-agent.example",
+          "received": "{{DAYS_AGO_1}}T09:30:00",
+          "body_preview": "Hallo Support-Team, nach dem letzten Windows Update (KB5034441) startet DeskAgent nicht mehr. Fehlermeldung: 'Python environment not found'. Können Sie mir helfen?",
+          "has_attachments": true,
+          "importance": "normal",
+          "is_read": true,
+          "flag_status": "flagged",
+          "categories": [],
+          "folder": "Inbox"
+        },
+        {
+          "entry_id": "DEMO006",
+          "message_id": "AAMkADemoMessage006",
+          "conversation_id": "CONV006",
+          "subject": "Weekly Digest: Demo Forum Updates",
+          "from": "noreply@demo-forum.example",
+          "from_name": "Demo Forum",
+          "to": "info@demo-agent.example",
+          "received": "{{DAYS_AGO_1}}T06:00:00",
+          "body_preview": "This week in our forum: New features, updates, and community highlights. Don't miss our upcoming webinar...",
+          "has_attachments": false,
+          "importance": "normal",
+          "is_read": false,
+          "flag_status": "notFlagged",
+          "categories": [],
+          "folder": "Inbox"
+        },
+        {
+          "entry_id": "DEMO007",
+          "message_id": "AAMkADemoMessage007",
+          "conversation_id": "CONV007",
+          "subject": "Re: Partnership Opportunity - Digital Twin Solutions",
+          "from": "demo.user3@demo-partner.example",
+          "from_name": "Demo User Three",
+          "to": "info@demo-agent.example",
+          "received": "{{DAYS_AGO_2}}T14:22:00",
+          "body_preview": "Vielen Dank für Ihre schnelle Antwort. Wir würden gerne einen Termin für eine Demo vereinbaren. Wäre nächste Woche Mittwoch möglich?",
+          "has_attachments": false,
+          "importance": "normal",
+          "is_read": true,
+          "flag_status": "notFlagged",
+          "categories": [],
+          "folder": "Inbox"
+        },
+        {
+          "entry_id": "DEMO008",
+          "message_id": "AAMkADemoMessage008",
+          "conversation_id": "CONV008",
+          "subject": "Invoice INV-2026-0015 from Demo AI Services",
+          "from": "billing@demo-ai-service.example",
+          "from_name": "Demo AI Services Billing",
+          "to": "finance@demo-agent.example",
+          "received": "{{DAYS_AGO_2}}T08:15:00",
+          "body_preview": "Your invoice for API usage in December 2025 is now available. Total amount: $342.50 USD. Payment due: February 1, 2026.",
+          "has_attachments": true,
+          "importance": "normal",
+          "is_read": false,
+          "flag_status": "notFlagged",
+          "categories": [],
+          "folder": "Inbox"
+        },
+        {
+          "entry_id": "DEMO009",
+          "message_id": "AAMkADemoMessage009",
+          "conversation_id": "CONV009",
+          "subject": "Kontaktformular: Preisanfrage für DeskAgent",
+          "from": "info@demo-agent.example",
+          "from_name": "Website Kontaktformular",
+          "to": "info@demo-agent.example",
+          "received": "{{DAYS_AGO_3}}T11:45:00",
+          "body_preview": "Neue Anfrage über Website:\n\nName: Demo Interessent\nFirma: Demo Automotive GmbH\nE-Mail: demo.interest@demo-automotive.example\n\nNachricht: Wir evaluieren derzeit KI-Assistenz-Lösungen für unsere Produktionslinie. Könnten Sie uns die Preise für die Enterprise Edition mitteilen?",
+          "has_attachments": false,
+          "importance": "normal",
+          "is_read": true,
+          "flag_status": "notFlagged",
+          "categories": [],
+          "folder": "Inbox"
+        },
+        {
+          "entry_id": "DEMO010",
+          "message_id": "AAMkADemoMessage010",
+          "conversation_id": "CONV010",
+          "subject": "Kontaktformular: -",
+          "from": "info@demo-agent.example",
+          "from_name": "Website Kontaktformular",
+          "to": "info@demo-agent.example",
+          "received": "{{DAYS_AGO_3}}T03:22:00",
+          "body_preview": "Neue Anfrage über Website:\n\nName: -\nFirma: -\nE-Mail: -\n\nNachricht: PXnsnbsJkxvSNLibr",
+          "has_attachments": false,
+          "importance": "normal",
+          "is_read": false,
+          "flag_status": "notFlagged",
+          "categories": [],
+          "folder": "Inbox"
+        },
+        {
+          "entry_id": "DEMO011",
+          "message_id": "AAMkADemoMessage011",
+          "conversation_id": "CONV011",
+          "subject": "Exclusive Investment Opportunity - $500K funding without equity!",
+          "from": "invest@fake-capital-scam.example",
+          "from_name": "Fake Capital Partners",
+          "to": "ceo@demo-agent.example",
+          "received": "{{DAYS_AGO_4}}T16:30:00",
+          "body_preview": "Dear CEO, We are pleased to offer your company an exclusive opportunity for $500,000 in growth funding with NO EQUITY required. Limited time offer! Reply immediately to secure your funding.",
+          "has_attachments": false,
+          "importance": "high",
+          "is_read": false,
+          "flag_status": "notFlagged",
+          "categories": [],
+          "folder": "Inbox"
+        },
+        {
+          "entry_id": "DEMO012",
+          "message_id": "AAMkADemoMessage012",
+          "conversation_id": "CONV012",
+          "subject": "GitHub: New release published - demo-project v4.5.0",
+          "from": "noreply@demo-github.example",
+          "from_name": "Demo GitHub",
+          "to": "dev@demo-agent.example",
+          "received": "{{DAYS_AGO_5}}T10:00:00",
+          "body_preview": "A new release has been published in demo-project: v4.5.0 - New features, improved performance, and bug fixes.",
+          "has_attachments": false,
+          "importance": "normal",
+          "is_read": true,
+          "flag_status": "notFlagged",
+          "categories": [],
+          "folder": "Inbox"
+        }
+      ],
+      "total_count": 12,
+      "folder": "Inbox"
+    }
+  },
+
+  "outlook_get_today_events": {
+    "response_json": {
+      "events": [
+        {
+          "id": "EVENT001",
+          "subject": "Daily Standup - Demo Team",
+          "start": "{{TODAY}}T09:00:00",
+          "end": "{{TODAY}}T09:15:00",
+          "location": "Microsoft Teams",
+          "is_all_day": false,
+          "organizer": "demo.organizer@demo-agent.example"
+        },
+        {
+          "id": "EVENT002",
+          "subject": "Demo: DeskAgent Enterprise Features",
+          "start": "{{TODAY}}T14:00:00",
+          "end": "{{TODAY}}T15:00:00",
+          "location": "https://teams.microsoft.com/meet/demo123",
+          "is_all_day": false,
+          "organizer": "sales@demo-agent.example",
+          "attendees": ["demo.user3@demo-partner.example"]
+        },
+        {
+          "id": "EVENT003",
+          "subject": "Quarterly Planning Meeting",
+          "start": "{{TOMORROW}}T10:00:00",
+          "end": "{{TOMORROW}}T12:00:00",
+          "location": "Conference Room A",
+          "is_all_day": false,
+          "organizer": "management@demo-agent.example"
+        }
+      ],
+      "count": 3
+    }
+  },
+
+  "outlook_get_folder_emails": {
+    "variants": [
+      {
+        "match_args": {"folder_name": "ToOffer"},
+        "response_json": {
+          "emails": [
+            {
+              "entry_id": "OFFER001",
+              "message_id": "AAMkAOfferMessage001",
+              "conversation_id": "OFFERCONV001",
+              "subject": "Anfrage: DeskAgent Lizenz für Hochschule",
+              "from": "demo.professor@demo-university.example",
+              "from_name": "Demo Professor",
+              "to": "info@demo-agent.example",
+              "received": "{{DAYS_AGO_5}}T14:30:00",
+              "body_preview": "Sehr geehrte Damen und Herren, für unser Forschungsprojekt im Bereich KI-Assistenz benötigen wir eine Lizenz für DeskAgent. Bitte senden Sie uns ein Angebot für die Education Edition.",
+              "has_attachments": false,
+              "importance": "normal",
+              "is_read": true,
+              "flag_status": "notFlagged",
+              "folder": "ToOffer"
+            }
+          ],
+          "total_count": 1,
+          "folder": "ToOffer"
+        }
+      },
+      {
+        "match_args": {"folder_name": "ToPay"},
+        "response_json": {
+          "emails": [
+            {
+              "entry_id": "PAY001",
+              "message_id": "AAMkAPayMessage001",
+              "conversation_id": "PAYCONV001",
+              "subject": "Rechnung RE-2025-12-0089 - Demo Cloud Services",
+              "from": "billing@demo-cloud.example",
+              "from_name": "Demo Cloud Billing",
+              "to": "finance@demo-agent.example",
+              "received": "{{DAYS_AGO_7}}T09:00:00",
+              "body_preview": "Ihre monatliche Rechnung für Demo Cloud Services ist bereit. Betrag: EUR 59,99. Fällig bis: {{DAYS_AHEAD_7}}.",
+              "has_attachments": true,
+              "importance": "normal",
+              "is_read": true,
+              "flag_status": "notFlagged",
+              "folder": "ToPay"
+            }
+          ],
+          "total_count": 1,
+          "folder": "ToPay"
+        }
+      }
+    ],
+    "fallback_response_json": {
+      "emails": [],
+      "total_count": 0,
+      "folder": "Unknown"
+    }
+  },
+
+  "outlook_batch_email_actions": {
+    "response_json": {
+      "success": true,
+      "results": [
+        {"action": "move", "success": true, "message": "Email moved successfully"},
+        {"action": "flag", "success": true, "message": "Email flagged successfully"}
+      ],
+      "processed": 2,
+      "failed": 0
+    }
+  },
+
+  "outlook_get_flagged_emails": {
+    "response_json": {
+      "emails": [
+        {
+          "entry_id": "DEMO005",
+          "message_id": "AAMkADemoMessage005",
+          "subject": "Support-Anfrage: DeskAgent startet nicht nach Windows Update",
+          "from": "demo.user2@demo-corp.example",
+          "from_name": "Demo User Two",
+          "received": "{{DAYS_AGO_1}}T09:30:00",
+          "flag_status": "flagged",
+          "folder": "Inbox"
+        }
+      ],
+      "total_count": 1
+    }
+  }
+}

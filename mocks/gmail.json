@@ -1,0 +1,186 @@
+{
+  "gmail_get_recent_emails": {
+    "response_json": {
+      "emails": [
+        {
+          "id": "DEMO-GMAIL-001",
+          "thread_id": "DEMO-THREAD-001",
+          "subject": "Frage zu DeskAgent Lizenz",
+          "from": "Demo Interessent <demo.interessent@demo-company.example>",
+          "to": ["ask@deskagent.de"],
+          "date": "{{HOURS_AGO_2}}",
+          "snippet": "Hallo, ich interessiere mich für DeskAgent. Können Sie mir mehr Informationen zu den Preisen schicken?",
+          "labels": ["UNREAD", "INBOX"],
+          "has_attachments": false
+        },
+        {
+          "id": "DEMO-GMAIL-002",
+          "thread_id": "DEMO-THREAD-002",
+          "subject": "Re: Support-Anfrage",
+          "from": "Demo Kunde <demo.kunde@demo-startup.example>",
+          "to": ["ask@deskagent.de"],
+          "date": "{{HOURS_AGO_5}}",
+          "snippet": "Vielen Dank für die schnelle Antwort! Das hat mein Problem gelöst.",
+          "labels": ["INBOX"],
+          "has_attachments": false
+        },
+        {
+          "id": "DEMO-GMAIL-003",
+          "thread_id": "DEMO-THREAD-003",
+          "subject": "Newsletter: KI-Trends 2026",
+          "from": "Demo Newsletter <newsletter@demo-news.example>",
+          "to": ["info@deskagent.de"],
+          "date": "{{HOURS_AGO_8}}",
+          "snippet": "Die wichtigsten KI-Trends für 2026...",
+          "labels": ["INBOX"],
+          "has_attachments": false
+        }
+      ],
+      "total": 3
+    }
+  },
+
+  "gmail_get_email": {
+    "variants": [
+      {
+        "match_args": {"message_id": "DEMO-GMAIL-001"},
+        "response_json": {
+          "id": "DEMO-GMAIL-001",
+          "thread_id": "DEMO-THREAD-001",
+          "subject": "Frage zu DeskAgent Lizenz",
+          "from": "Demo Interessent <demo.interessent@demo-company.example>",
+          "to": ["ask@deskagent.de"],
+          "date": "{{HOURS_AGO_2}}",
+          "body": "Hallo,\n\nich interessiere mich für DeskAgent für unser Team von 10 Personen.\n\nKönnten Sie mir bitte Informationen zu den Preisen und Lizenzoptionen schicken?\n\nMit freundlichen Grüßen\nDemo Interessent",
+          "labels": ["UNREAD", "INBOX"],
+          "has_attachments": false
+        }
+      }
+    ],
+    "fallback_response_json": {
+      "id": "DEMO-GMAIL-FALLBACK",
+      "subject": "Demo Email",
+      "from": "demo@demo.example",
+      "body": "Dies ist eine Demo-E-Mail.",
+      "labels": ["INBOX"]
+    }
+  },
+
+  "gmail_create_draft": {
+    "response_json": {
+      "draft_id": "demo-draft-001",
+      "message_id": "demo-msg-001",
+      "thread_id": "demo-thread-001"
+    }
+  },
+
+  "gmail_create_reply_draft": {
+    "response_json": {
+      "draft_id": "demo-reply-draft-001",
+      "message_id": "demo-reply-msg-001",
+      "thread_id": "demo-thread-001",
+      "to": "demo@demo.example",
+      "subject": "Re: Demo Email"
+    },
+    "metadata": {
+      "delay_ms": 200
+    }
+  },
+
+  "gmail_send_draft": {
+    "response": "Email sent successfully!\n\nMessage ID: demo-sent-001\nThread ID: demo-thread-001\nLabels: SENT",
+    "metadata": {
+      "delay_ms": 300
+    }
+  },
+
+  "gmail_send_email": {
+    "response": "Email sent successfully!\n\nMessage ID: demo-sent-002\nTo: demo@demo.example\nSubject: Demo Subject",
+    "metadata": {
+      "delay_ms": 300
+    }
+  },
+
+  "gmail_add_label": {
+    "response": "Label added successfully.",
+    "metadata": {
+      "delay_ms": 100
+    }
+  },
+
+  "gmail_remove_label": {
+    "response": "Label removed successfully.",
+    "metadata": {
+      "delay_ms": 100
+    }
+  },
+
+  "gmail_trash_email": {
+    "response": "Email moved to trash.",
+    "metadata": {
+      "delay_ms": 100
+    }
+  },
+
+  "gmail_delete_draft": {
+    "response": "Draft deleted successfully.",
+    "metadata": {
+      "delay_ms": 100
+    }
+  },
+
+  "gmail_list_labels": {
+    "response_json": {
+      "labels": [
+        {"id": "INBOX", "name": "INBOX", "type": "system"},
+        {"id": "SENT", "name": "SENT", "type": "system"},
+        {"id": "TRASH", "name": "TRASH", "type": "system"},
+        {"id": "SPAM", "name": "SPAM", "type": "system"},
+        {"id": "Label_Ask", "name": "Ask", "type": "user"},
+        {"id": "Label_IsDone", "name": "IsDone", "type": "user"}
+      ]
+    }
+  },
+
+  "gmail_create_label": {
+    "response_json": {
+      "id": "Label_NewDemo",
+      "name": "NewDemo",
+      "type": "user"
+    }
+  },
+
+  "gmail_search": {
+    "response_json": {
+      "emails": [
+        {
+          "id": "DEMO-SEARCH-001",
+          "subject": "Suchergebnis Demo",
+          "from": "demo@demo.example",
+          "date": "{{DAYS_AGO_1}}"
+        }
+      ],
+      "total": 1
+    }
+  },
+
+  "gmail_get_thread": {
+    "response_json": {
+      "thread_id": "demo-thread-001",
+      "messages": [
+        {
+          "id": "DEMO-MSG-001",
+          "subject": "Original Message",
+          "from": "demo@demo.example",
+          "date": "{{DAYS_AGO_2}}"
+        },
+        {
+          "id": "DEMO-MSG-002",
+          "subject": "Re: Original Message",
+          "from": "ask@deskagent.de",
+          "date": "{{DAYS_AGO_1}}"
+        }
+      ]
+    }
+  }
+}

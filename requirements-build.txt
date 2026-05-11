@@ -1,0 +1,13 @@
+# =============================================================================
+# AI Assistant - Build Dependencies (Nuitka Distribution)
+# =============================================================================
+# Install these ONLY when building compiled distributions:
+#   pip install -r requirements-build.txt
+# =============================================================================
+
+# Nuitka Python Compiler
+# Free version for testing, Commercial for production
+nuitka>=2.0
+
+# Nuitka dependency
+ordered-set>=4.1.0

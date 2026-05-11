@@ -1,0 +1,130 @@
+# =============================================================================
+# DeskAgent .gitignore - public repo (deskagent-ai/community)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Secrets - NEVER commit these
+# -----------------------------------------------------------------------------
+# Note: deskagent/config/*.json are SYSTEM DEFAULTS / TEMPLATES with placeholder
+# values like "YOUR_OPENAI_API_KEY" or empty strings. They MUST be committed
+# so OSS users see the expected structure. Real user values live in the
+# user-override config directory ($PROJECT_DIR/config/, outside deskagent/),
+# which is never part of this repo at all.
+#
+# We only ignore artifacts that should never appear here:
+# hardware-bound binary license
+config/license.dat
+# encrypted user-config output
+config/encrypted_*.json
+# opt-in convention for local overrides
+config/*.local.json
+
+# -----------------------------------------------------------------------------
+# Company-specific Cowork-Plugin content (lives in game4automation/cowork-private)
+# -----------------------------------------------------------------------------
+cowork-plugin/skills/company/
+cowork-plugin/skills/products/
+cowork-plugin/skills/mailstyle/
+cowork-plugin/skills/whisper_keywords/
+
+cowork-plugin/commands/realvirtual-support.md
+cowork-plugin/commands/claude-support.md
+cowork-plugin/commands/janitza-energy-report.md
+cowork-plugin/commands/kontoauszug-rechnung-abgleich.md
+cowork-plugin/commands/paperless-export-steuerberater.md
+cowork-plugin/commands/check-cc-invoices.md
+cowork-plugin/commands/create-transfer.md
+cowork-plugin/commands/check-support.md
+cowork-plugin/commands/check-open-items.md
+cowork-plugin/commands/check-payments.md
+cowork-plugin/commands/cleanup-newsletters.md
+cowork-plugin/commands/travel-expense-tracker.md
+
+# Invoice / SEPA workflows (firmenspezifische Buchhaltungs-Prozesse)
+# Timelog/Customer-Report Dateien wurden komplett geloescht (nicht nur gitignored).
+cowork-plugin/commands/archive-invoices-to-dms.md
+cowork-plugin/commands/create-invoice-from-email.md
+cowork-plugin/commands/email-invoices-to-dms.md
+cowork-plugin/commands/expenses-to-sepa.md
+cowork-plugin/commands/export-invoices.md
+cowork-plugin/commands/extract-invoice-amounts.md
+cowork-plugin/commands/invoices-to-sepa.md
+cowork-plugin/commands/process-order.md
+
+# -----------------------------------------------------------------------------
+# Company-specific Agents
+# -----------------------------------------------------------------------------
+agents/claude_support.md
+agents/realvirtual_*.md
+
+# Invoice / SEPA System-Agents (firmenspezifische Buchhaltungs-Workflows)
+# Timelog/Customer-Report Dateien wurden komplett geloescht (nicht nur gitignored).
+agents/check_cc_invoices.md
+agents/email_invoices_to_dms.md
+agents/expenses_to_sepa.md
+agents/invoices_to_sepa.md
+agents/mailsort_invoices.md
+agents/check_payments.md
+agents/create_invoice_from_email.md
+agents/export_invoices.md
+agents/archive_invoices_to_dms.md
+
+# -----------------------------------------------------------------------------
+# Bundled tools (too large for Git, installer-only)
+# -----------------------------------------------------------------------------
+# Embedded Python 3.12 (~1.9GB)
+python/
+# Portable Git for Windows (~354MB)
+git/
+
+# -----------------------------------------------------------------------------
+# Runtime / generated files
+# -----------------------------------------------------------------------------
+deskagent.pid
+paths_debug.txt
+workspace/
+.state/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.temp/
+.logs/
+
+# -----------------------------------------------------------------------------
+# Build artifacts
+# -----------------------------------------------------------------------------
+buildrelease/build/
+*.build/
+*.dist/
+*.egg-info/
+build/
+dist/
+
+# -----------------------------------------------------------------------------
+# Editor / IDE
+# -----------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# -----------------------------------------------------------------------------
+# Test / coverage
+# -----------------------------------------------------------------------------
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+
+# -----------------------------------------------------------------------------
+# Virtual environments
+# -----------------------------------------------------------------------------
+.venv/
+venv/
+env/

@@ -1,0 +1,19 @@
+# Teams Watcher Prompt Template
+
+When a message arrives in the monitored Teams channel, the agent receives this prompt.
+
+## Placeholders
+
+- `{{SENDER}}` - Display name of the message sender
+- `{{CONTENT}}` - The message content
+- `{{WEBHOOK}}` - The webhook name for replies (from triggers.json)
+
+## Template
+
+```
+[Teams Message from {{SENDER}}]
+{{CONTENT}}
+
+---
+Respond to this Teams message. Use teams_post_to_configured_channel('{{WEBHOOK}}', your_response) to reply.
+```
