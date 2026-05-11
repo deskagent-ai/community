@@ -377,6 +377,45 @@ with a [Plugin Exception](LICENSE) (see the bottom of the LICENSE file).
 **Need an AGPL-free Commercial License?**
 Contact info@realvirtual.io.
 
+### Third-party licenses
+
+DeskAgent depends on ~140 third-party Python packages. The major
+direct dependencies and their SPDX-style licenses are listed in
+[NOTICE](NOTICE). A complete, version-pinned report of every
+installed package (including transitive dependencies) and their
+license texts can be regenerated at any time:
+
+```bash
+python scripts/collect_licenses.py --output THIRD_PARTY_LICENSES.md
+```
+
+**AGPL-3.0 compatibility:** the entire dependency tree was scanned
+on 2026-05-11 and is compatible with AGPL-3.0. The most common
+license families in the tree are MIT, Apache-2.0, BSD-3-Clause,
+MPL-2.0, LGPL-3.0 and PSF — all of which can be combined with
+AGPL-3.0 code. There are **no** GPL-2.0-only, SSPL, Business-
+Source-Licensed, or AGPL-only dependencies. The one GPL-3.0 entry
+in the tree (the `libscipy_openblas*.dll` Fortran runtime shipped
+inside NumPy) carries the GCC Runtime Library Exception, which
+explicitly permits combining it with code under any license.
+
+**Optional extras carry separate license terms:**
+
+- `pip install deskagent[anonymizer]` adds Microsoft Presidio and
+  spaCy (MIT), plus language models under CC BY-SA 4.0
+  (`de_core_news_lg`, `en_core_web_lg`). Models require attribution.
+- `pip install deskagent[claude-sdk]` adds the `claude-agent-sdk`
+  Python wrapper (MIT) AND downloads a proprietary `claude` CLI
+  binary subject to Anthropic's Commercial Terms of Service. The
+  binary is **not** AGPL-compatible source — DeskAgent does not
+  ship it; it is pulled in only when this extra is installed. If
+  you need a strictly source-available installation, do not install
+  this extra.
+
+If you find an apparent license conflict or a missing attribution,
+please open a GitHub Issue or email info@realvirtual.io — we treat
+license issues with high priority.
+
 ## Naming and forks
 
 The name "DeskAgent" is a generic descriptive term and is not registered
