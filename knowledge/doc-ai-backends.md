@@ -8,15 +8,17 @@ DeskAgent supports several AI backends with different strengths and pricing.
 
 | Backend | Model | Type | Price/1M Tokens | Use Case |
 |---------|-------|------|-----------------|----------|
-| **claude_sdk** | Claude 3.5 Sonnet v2 | Agent SDK + MCP | $3/$15 | **Recommended** - Best MCP integration |
+| **claude_sdk** | Claude Opus 4.6 (default) | Agent SDK + MCP | $15/$75 | **Recommended** - Best MCP integration |
 | **gemini** | Gemini 2.5 Pro | API | $1.25/$10 | Cheap alternative with good quality |
 | **gemini_flash** | Gemini 2.5 Flash | API | $0.30/$2.50 | Fast and very cheap |
 | **gemini_3** | Gemini 3.1 Pro Preview | API | $2/$12 | **New** - Better tool handling, structured outputs |
 | **gemini_3_flash** | Gemini 3.1 Flash Preview | API | $0.50/$3 | **New** - Fast Gemini 3 model |
-| **openai** | GPT-4o | API | $2.50/$10 | OpenAI standard model |
+| **openai** | GPT-5 (configurable) | API | $1.25/$10 | OpenAI standard model |
 | **mistral** | Mistral Large | API | $2/$6 | European provider |
 | **qwen** | Qwen | Ollama (local) | free | Offline, no API costs |
-| **claude** | Claude 3.5 Sonnet | CLI | $3/$15 | Legacy, uses CLI instead of SDK |
+| **claude** | Claude (CLI) | CLI | $3/$15 | Legacy, uses CLI instead of SDK |
+
+> **Note:** `claude_sdk` requires the optional `claude-agent-sdk` extra. Install via `pip install "deskagent[claude-sdk]"`. The wrapper degrades gracefully if the SDK is not installed.
 
 ---
 
@@ -45,8 +47,10 @@ DeskAgent supports several AI backends with different strengths and pricing.
 - Prompt caching saves cost on repeated prompts
 
 **Disadvantages:**
-- More expensive than Gemini ($3/$15 vs $1.25/$10)
+- Default model (`claude-opus-4-6`) is significantly more expensive than Gemini ($15/$75 vs $1.25/$10)
+- Switch to Sonnet via `"model": "claude-sonnet-4-5-20250929"` for $3/$15 pricing
 - Only Anthropic models available
+- Requires optional `[claude-sdk]` extra (bundles proprietary `claude` binary)
 
 **Permission Modes:**
 - `"default"` - Ask before every tool call (for UI-based workflows)
@@ -223,7 +227,7 @@ DeskAgent supports several AI backends with different strengths and pricing.
   "openai": {
     "type": "openai_api",
     "api_key": "sk-...",
-    "model": "gpt-4o",
+    "model": "gpt-5",
     "anonymize": true
   }
 }
@@ -299,14 +303,16 @@ DeskAgent supports several AI backends with different strengths and pricing.
 | **gemini** | $0.00375 | $0.005 | **$0.00875** | 4x |
 | **gemini_3_flash** | $0.0015 | $0.0015 | **$0.003** | 1.4x |
 | **gemini_3** | $0.006 | $0.006 | **$0.012** | 5.6x |
-| **claude_sdk** | $0.009 | $0.0075 | **$0.0165** | 7.7x |
+| **claude_sdk** (Opus 4.6, default) | $0.045 | $0.0375 | **$0.0825** | 38x |
+| **claude_sdk** (Sonnet 4.5) | $0.009 | $0.0075 | **$0.0165** | 7.7x |
 
 **For 1000 emails/month:**
 - **Gemini Flash**: $2.15
 - **Gemini 2.5 Pro**: $8.75
 - **Gemini 3 Flash**: $3.00
 - **Gemini 3 Pro**: $12.00
-- **Claude SDK**: $16.50
+- **Claude SDK (Sonnet 4.5)**: $16.50
+- **Claude SDK (Opus 4.6 default)**: $82.50
 
 ---
 

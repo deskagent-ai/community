@@ -88,7 +88,7 @@ POST /prompt
 {
   "prompt": "What is the status of my last invoice?",
   "continue_context": true,
-  "backend": "claude",
+  "backend": "gemini",
   "triggered_by": "api"
 }
 ```
@@ -222,11 +222,11 @@ GET /backends
 **Response:**
 ```json
 {
-  "enabled": ["claude", "gemini", "gemini_flash"],
-  "default": "claude",
+  "enabled": ["claude_sdk", "gemini", "gemini_flash"],
+  "default": "gemini",
   "count": 3,
   "details": {
-    "claude": {"type": "claude_agent_sdk", "model": "claude-sonnet-4-20250514"}
+    "claude_sdk": {"type": "claude_agent_sdk", "model": "claude-opus-4-6", "configured": true}
   }
 }
 ```
@@ -282,7 +282,7 @@ GET /session
 {
   "session_id": "sess_abc123",
   "agent_name": "chat",
-  "backend": "claude",
+  "backend": "gemini",
   "history_count": 5
 }
 ```
@@ -308,7 +308,7 @@ GET /history/sessions?limit=20&offset=0&agent=chat&status=completed
     {
       "session_id": "sess_abc123",
       "agent_name": "chat",
-      "backend": "claude",
+      "backend": "gemini",
       "started_at": "2025-01-15T10:30:00",
       "status": "completed",
       "turn_count": 5,
@@ -316,8 +316,8 @@ GET /history/sessions?limit=20&offset=0&agent=chat&status=completed
     }
   ],
   "total": 42,
-  "total_turns": 150,
-  "total_cost_usd": 1.23
+  "limit": 20,
+  "offset": 0
 }
 ```
 
@@ -339,7 +339,7 @@ POST /history/sessions/{session_id}/continue
 ```json
 {
   "agent_name": "chat",
-  "backend": "claude",
+  "backend": "gemini",
   "context": "Previous conversation context...",
   "original_session_id": "sess_abc123"
 }

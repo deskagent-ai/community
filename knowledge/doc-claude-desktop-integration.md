@@ -28,7 +28,7 @@ The fastest path is via the DeskAgent UI.
 
 ### Through the UI (Settings → Integrations)
 
-1. Open DeskAgent → **System** (gear icon) → **Integrations** tab
+1. Open DeskAgent → **Settings** (gear icon) → **Integrations** tab
 2. In the **Claude Desktop / Cowork** section click **Set up**
 3. Confirmation dialog: DeskAgent will
    - locate the Claude Desktop config file (see [Config paths](#config-paths))

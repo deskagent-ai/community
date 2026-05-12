@@ -4,28 +4,22 @@ The Setup Wizard is shown on the first start of DeskAgent and helps configure th
 
 ## When is the Wizard shown?
 
-The wizard appears automatically when `config/backends.json` does not exist. After completion, this file is created and the wizard is no longer shown.
+The wizard appears automatically when `config/backends.json` does not exist OR when it exists but has no API keys configured and `setup_completed` is not `true`. After completion (or explicit skip), `setup_completed: true` is written and the wizard is no longer shown.
 
 ## Configuration Steps
 
-### Step 1: Claude AI (Anthropic)
-
-**If Claude Code CLI is installed:**
-- The wizard detects the installation automatically
-- Shows "Claude Code found - no API key required"
-- Uses the Claude subscription (cheaper than API)
-
-**If Claude Code CLI is not installed:**
-- Enter Anthropic API key (starts with `sk-ant-`)
-- Create key at: https://console.anthropic.com/settings/keys
-
-Claude offers the highest quality for complex agents, banking, and demanding tasks.
-
-### Step 2: Google Gemini
+### Step 1: Google Gemini
 
 - Enter Gemini API key (starts with `AIza`)
 - Create key at: https://aistudio.google.com/apikey
 - Good price-performance ratio with free tier
+
+### Step 2: Claude AI (Anthropic)
+
+- Enter Anthropic API key (starts with `sk-ant-`)
+- Create key at: https://console.anthropic.com/settings/keys
+
+Claude offers the highest quality for complex agents, banking, and demanding tasks.
 
 ### Step 3: OpenAI
 
@@ -40,7 +34,7 @@ This step allows the installation of language models for **anonymization** of se
 
 **What is installed?**
 - `de_core_news_lg` - German language model (~500MB)
-- `en_core_web_lg` - English language model (~500MB)
+- `en_core_web_sm` - English language model (small, ~50MB, bundled in installer)
 
 **What are the models for?**
 - Detection of personal data (names, emails, addresses, phone numbers)
@@ -54,7 +48,7 @@ This step allows the installation of language models for **anonymization** of se
 **Manual installation (if skipped):**
 ```bash
 python -m spacy download de_core_news_lg
-python -m spacy download en_core_web_lg
+python -m spacy download en_core_web_sm
 ```
 
 ## Skipping
@@ -115,7 +109,7 @@ To show the wizard again:
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/setup` | GET | Show wizard HTML |
-| `/api/setup/check-claude` | GET | Check Claude CLI availability |
+| `/api/setup/prefill` | GET | Get prefill values for sandbox testing |
 | `/api/setup/check-spacy` | GET | Check spaCy models status |
 | `/api/setup/install-spacy` | POST | Download spaCy models |
 | `/api/setup` | POST | Save configuration |
@@ -123,6 +117,6 @@ To show the wizard again:
 ### Wizard Flow
 
 ```
-Welcome (License) → Claude → Gemini → OpenAI → Privacy → Done
-     Page 0          Page 1   Page 2   Page 3   Page 4   Page 5
+Welcome (License) → Gemini → Claude → OpenAI → Privacy → Edition
+     Page 0          Page 2   Page 3   Page 4   Page 5
 ```

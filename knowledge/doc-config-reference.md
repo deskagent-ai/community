@@ -8,8 +8,9 @@ Complete reference for modular configuration files in `config/`.
 config/
 ├── system.json      # UI, Logging, Email Watchers
 ├── backends.json    # AI Backend API Keys
-├── apis.json        # External APIs (Billomat, UserEcho, SEPA)
-└── agents.json      # Skills & Agents Definitions
+├── apis.json        # External APIs (Billomat, UserEcho, etc.)
+├── banking.json     # SEPA bank accounts (multi-account)
+└── agents.json      # Skills & Agents Definitions (legacy/fallback)
 ```
 
 ---
@@ -272,22 +273,31 @@ External API credentials.
   "userecho": {
     "subdomain": "your-subdomain",
     "api_key": "your-api-key"
-  },
-  "sepa": {
-    "meinefirma": {
-      "name": "Meine Firma GmbH",
-      "iban": "DE...",
-      "bic": "...",
-      "currency": "EUR"
-    },
-    "private": {
-      "name": "Personal Name",
-      "iban": "DE...",
-      "bic": "...",
-      "currency": "EUR"
-    },
-    "default": "meinefirma"
   }
+}
+```
+
+---
+
+## banking.json
+
+SEPA bank account configuration (separate file, NOT in `apis.json`).
+
+```json
+{
+  "meinefirma": {
+    "name": "Meine Firma GmbH",
+    "iban": "DE...",
+    "bic": "...",
+    "currency": "EUR"
+  },
+  "private": {
+    "name": "Personal Name",
+    "iban": "DE...",
+    "bic": "...",
+    "currency": "EUR"
+  },
+  "default": "meinefirma"
 }
 ```
 
@@ -410,5 +420,6 @@ See **[doc-mcp-tools.md](doc-mcp-tools.md)** for all tool parameters.
 |------|---------|--------------|
 | `system.json` | System config | UI, logging, watchers |
 | `backends.json` | AI backends | API keys, models |
-| `apis.json` | External APIs | Billomat, UserEcho, SEPA |
-| `agents.json` | Workflows | Skills, agents, MCP access |
+| `apis.json` | External APIs | Billomat, UserEcho |
+| `banking.json` | SEPA accounts | Multi-account bank config |
+| `agents.json` | Workflows | Skills, agents, MCP access (legacy) |

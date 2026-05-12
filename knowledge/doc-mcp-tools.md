@@ -157,7 +157,7 @@ outlook_batch_email_actions([...])
 
 ## Outlook - Calendar
 - `outlook_get_today_events` - Show today's appointments
-- `outlook_get_upcoming_events(days=21)` - Appointments for the next X days (e.g. 21 for 3 weeks)
+- `outlook_get_upcoming_events(days=7)` - Appointments for the next X days (default 7; pass 21 for 3 weeks)
 - `outlook_get_calendar_event_details` - Search appointment details by subject
 - `outlook_check_availability(date_str, start_time, end_time)` - Check if time slot is free
 - `outlook_create_appointment(subject, date, start, end, location, body)` - **Create appointment**
@@ -1113,7 +1113,7 @@ browser_screenshot(".temp/login_result.png")
 - `desk_add_agent_config(name, category, ...)` - **Add agent to agents.json**
 - `desk_remove_agent_config(name)` - **Remove agent from agents.json**
 - `desk_get_agent_log()` - **Read last agent log** (agent_latest.txt)
-- `desk_get_system_log(lines=100)` - **Read system log** (last N lines)
+- `desk_get_mcp_log(lines=100)` - **Read MCP/system log** (last N lines)
 
 **Start agent with inputs:**
 ```python

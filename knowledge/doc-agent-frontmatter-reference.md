@@ -191,15 +191,18 @@ Hides the agent from the WebUI, but it remains available (e.g. for automated wor
 The AI backend for this agent.
 
 **Type:** `string`
-**Default:** `"claude_sdk"`
+**Default:** Backend listed under `default_ai` in `backends.json` (system default: `"gemini"`)
 
 **Available backends:**
 
 | Backend | Description | Price/1M token |
 |---------|-------------|----------------|
-| `claude_sdk` | Claude Agent SDK (recommended) | $3/$15 |
-| `gemini` | Google Gemini API | $1.25/$10 |
-| `openai` | OpenAI GPT API | $2.50/$10 |
+| `claude_sdk` | Claude Agent SDK (default model: Opus 4.6, requires `[claude-sdk]` extra) | $15/$75 (Opus) |
+| `gemini` | Google Gemini 2.5 Pro | $1.25/$10 |
+| `gemini_flash` | Google Gemini 2.5 Flash | $0.30/$2.50 |
+| `gemini_3` | Google Gemini 3 Pro (preview) | $2/$12 |
+| `gemini_3_flash` | Google Gemini 3 Flash (preview) | $0.50/$3 |
+| `openai` | OpenAI GPT API (default model: `gpt-5`) | $1.25/$10 |
 | `mistral` | Mistral API | $2/$6 |
 | `qwen` | Qwen via Ollama | free |
 
@@ -341,20 +344,29 @@ Allowed MCP servers as pipe-separated regex pattern.
 
 | Server | Description |
 |--------|-------------|
-| `outlook` | Email, calendar (local) |
-| `msgraph` | Microsoft Graph API |
+| `outlook` | Email, calendar (local Outlook COM) |
+| `msgraph` | Microsoft Graph API (Mail, Calendar, Teams) |
 | `gmail` | Gmail and Google Calendar |
+| `imap` | IMAP/SMTP for generic mail providers |
 | `billomat` | Customers, quotes, invoices |
-| `lexware` | Lexware Office API |
+| `lexware` | Lexware Office API (beta) |
+| `sevdesk` | sevDesk API (beta) |
 | `userecho` | Support tickets |
-| `sepa` | SEPA XML transfers |
+| `sepa` | SEPA XML transfers, CAMT.052 read |
 | `filesystem` | File operations |
 | `pdf` | PDF manipulation |
+| `excel` | Excel `.xlsx` read/write |
 | `clipboard` | Clipboard |
 | `datastore` | SQLite data store |
-| `browser` | Browser automation |
+| `browser` | Browser automation (CDP) |
 | `paperless` | Paperless-ngx DMS |
 | `ecodms` | ecoDMS archive |
+| `telegram` | Telegram Bot API (beta) |
+| `linkedin` | LinkedIn (beta) |
+| `instagram` | Instagram (beta) |
+| `chart` | Chart/graph generation |
+| `project` | Claude Code CLI in other projects |
+| `desk` | DeskAgent system control |
 
 ### `allowed_tools`
 

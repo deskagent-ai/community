@@ -2,6 +2,19 @@
 
 DeskAgent includes a GDPR-compliant PII anonymization system that protects sensitive data when using external AI services.
 
+!!! note "Optional dependency (Community / AGPL edition)"
+    The anonymizer relies on Microsoft Presidio + spaCy (~500MB of language
+    models) and is therefore an **optional** install:
+
+    ```bash
+    pip install "deskagent[anonymizer]"
+    python -m spacy download de_core_news_lg
+    python -m spacy download en_core_web_lg
+    ```
+
+    Without this extra installed, anonymization degrades gracefully and is
+    effectively disabled (see `scripts/ai_agent/anonymizer.py`).
+
 ## Overview
 
 When agents process emails, documents, or other content, personal identifiable information (PII) is automatically anonymized before being sent to AI providers like Gemini, Claude, or OpenAI. The AI receives placeholders instead of real data, and responses are de-anonymized before being shown to the user.
@@ -68,7 +81,7 @@ Both files are merged at runtime - customer config extends system defaults.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `enabled` | true | Master switch for anonymization |
+| `enabled` | false | Master switch for anonymization (off by default in Community Edition) |
 | `log_anonymization` | false | Log detected entities to system.log |
 
 ## Whitelist
@@ -234,7 +247,8 @@ If you see `<PERSON_1>` in the final output, de-anonymization failed. Check:
 
 | File | Purpose |
 |------|---------|
-| `deskagent/scripts/ai_agent/anonymizer.py` | Main anonymization logic |
+| `deskagent/scripts/ai_agent/anonymizer.py` | Main anonymization logic (degrades gracefully if presidio missing) |
 | `deskagent/scripts/ai_agent/anonymizer_service.py` | Presidio subprocess |
 | `deskagent/config/anonymizer.json` | System defaults |
 | `config/anonymizer.json` | Customer overrides |
+| `pyproject.toml` | `[anonymizer]` optional extra declaration |

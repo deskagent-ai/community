@@ -36,7 +36,7 @@ knowledge/
 
 ### Core Function
 
-**File:** `deskagent/scripts/ai_agent/base.py`
+**File:** `deskagent/scripts/ai_agent/knowledge_loader.py`
 
 ```python
 def load_knowledge(pattern: str = None) -> str:

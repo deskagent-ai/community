@@ -103,7 +103,7 @@ def generiere_antwort(self):
 
 **Via API:**
 ```bash
-curl -X POST http://localhost:8765/api/workflows/email_reply/start \
+curl -X POST http://localhost:8765/workflows/email_reply/start \
      -H "Content-Type: application/json" \
      -d '{"email_id": "ABC123"}'
 ```
@@ -129,9 +129,9 @@ class MeinWorkflow(Workflow):
 ```
 
 **API:**
-- `GET /api/workflows` - List all workflows
-- `POST /api/workflows/{id}/start` - Start workflow
-- `GET /api/workflows/runs` - Running workflows
+- `GET /workflows` - List all workflows
+- `POST /workflows/{id}/start` - Start workflow
+- `GET /workflows/{id}` - Workflow details
 
 ## Auto-Resume
 

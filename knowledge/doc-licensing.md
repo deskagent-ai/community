@@ -156,5 +156,9 @@ Team members activate DeskAgent with:
 
 For license issues:
 
-- **Email**: support@deskagent.de
-- **Customer portal**: https://portal.deskagent.de
+- **Email**: ask@deskagent.de
+
+**Note:** This document describes the **Commercial Edition** activation flow. In the
+**AGPL / Community Edition** (no `config/license.json`, no `app.license_api_url`
+configured) the License tab and all activation endpoints are served by the
+`NullLicenseProvider` and never perform network calls — no activation is required.

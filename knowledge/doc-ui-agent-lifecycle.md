@@ -209,7 +209,7 @@ The System Panel contains multiple configuration tabs:
                        │
         ┌──────────────▼──────────────────────┐
         │  WebUI: streamTask(taskId)          │
-        │  EventSource: GET /stream/{taskId}  │
+        │  EventSource: GET /task/{taskId}/stream │
         └──────────────┬──────────────────────┘
                        │
                        │  ◄─── SSE Events ───┐
@@ -321,7 +321,7 @@ def handle_dialog_response(response, conversation_history):
 If you experience context loss, check:
 
 1. **Agent log** (`workspace/.logs/agent_latest.txt`) - Shows sent messages
-2. **Session store** - `GET /session/{id}/context` returns saved turns
+2. **Session store** - `GET /sessions/{session_id}` returns the full session including all turns
 3. **SSE events** - `content_sync` event contains the current conversation state
 
 ## Status Transitions
@@ -796,10 +796,11 @@ The `.current-chat` highlight is driven by the `da:current-session-changed` cust
 
 ```
 1. User clicks "Continue"
-2. GET /session/{id}/context → Previous turns
-3. UI shows conversation
-4. User types follow-up
-5. POST /prompt with session_id → Continues same session
+2. POST /sessions/{session_id}/continue → Loads session into state
+3. GET /sessions/{session_id} → Returns previous turns for display
+4. UI shows conversation
+5. User types follow-up
+6. POST /prompt with session_id → Continues same session
 ```
 
 **What User Sees on Continue:**

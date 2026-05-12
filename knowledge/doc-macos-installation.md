@@ -31,14 +31,15 @@ On first launch, DeskAgent automatically:
     ├── MacOS/
     │   └── DeskAgent              # Main executable
     ├── Resources/                 # Bundled data (system defaults)
-    │   ├── python/venv/           # Python for MCP servers
+    │   ├── python/                # Embedded Python venv (bin/python3, lib/...)
     │   ├── mcp/                   # MCP server scripts
     │   ├── agents/                # System agents (fallback)
     │   ├── skills/                # System skills (fallback)
     │   ├── knowledge/             # System knowledge (fallback)
-    │   ├── templates/             # System templates
+    │   ├── scripts/templates/     # System templates
     │   ├── config/                # Default configuration
     │   ├── i18n/                  # Translations
+    │   ├── mocks/                 # Mock data for development/testing
     │   └── version.json
     └── Info.plist
 ```
@@ -201,8 +202,8 @@ python3 build.py --platform macos --test      # Quick test (no DMG)
 
 ### Output
 
-- Test build: `buildrelease/build/dist-commercial/DeskAgent/DeskAgent.app`
-- Release: `buildrelease/build/DeskAgent-X.Y.Z.dmg`
+- Test build: `buildrelease/build/dist-macos/DeskAgent.app`
+- Release: `buildrelease/build/dist-macos/DeskAgent-X.Y.Z.dmg`
 
 ## Uninstallation
 

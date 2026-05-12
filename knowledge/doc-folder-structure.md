@@ -144,7 +144,7 @@ from paths import (
     # Product directories
     get_templates_dir,# -> DESKAGENT_DIR/templates/
     get_mcp_dir,      # -> DESKAGENT_DIR/mcp/
-    get_mcp_dirs,     # -> [(path, "user"|"product"), ...]
+    get_mcp_dirs,     # -> [(path, source), ...] where source is "user" or "product"
 
     # Utilities
     clear_temp_dir,   # Delete .temp/ contents

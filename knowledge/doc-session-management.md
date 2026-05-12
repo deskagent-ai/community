@@ -237,7 +237,7 @@ POST /history/sessions/abc123-def456/continue
 ### Important Functions
 
 #### start_or_continue_session()
-**File:** `deskagent/scripts/assistant/core/state.py:215-296`
+**File:** `deskagent/scripts/assistant/core/state.py` (around line 326)
 
 ```python
 def start_or_continue_session(agent_name: str, backend: str, model: str,
@@ -264,7 +264,7 @@ def start_or_continue_session(agent_name: str, backend: str, model: str,
 ---
 
 #### end_current_session()
-**File:** `deskagent/scripts/assistant/core/state.py:396-412`
+**File:** `deskagent/scripts/assistant/core/state.py` (around line 538)
 
 ```python
 def end_current_session():
@@ -284,7 +284,7 @@ def end_current_session():
 ---
 
 #### load_session_for_continue()
-**File:** `deskagent/scripts/assistant/core/state.py:421-465`
+**File:** `deskagent/scripts/assistant/core/state.py` (around line 580)
 
 ```python
 def load_session_for_continue(session_id: str) -> Optional[str]:
@@ -307,7 +307,7 @@ def load_session_for_continue(session_id: str) -> Optional[str]:
 ---
 
 #### reactivate_session()
-**File:** `deskagent/scripts/assistant/session_store.py:325-346`
+**File:** `deskagent/scripts/assistant/session_store.py` (around line 482)
 
 ```python
 def reactivate_session(session_id: str) -> bool:
@@ -327,7 +327,7 @@ def reactivate_session(session_id: str) -> bool:
 ---
 
 #### _cleanup_session()
-**File:** `deskagent/scripts/assistant/core/agent_task.py:323-346`
+**File:** `deskagent/scripts/assistant/core/agent_task.py` (around line 363)
 
 ```python
 def _cleanup_session(self, status: str = "completed"):
@@ -488,7 +488,7 @@ Knowledge is reloaded **on every turn**, NOT once per session.
          → load_knowledge_cached()  # 5-minute cache
 ```
 
-**Code:** `deskagent/scripts/ai_agent/base.py:945-1062`
+**Code:** `deskagent/scripts/ai_agent/prompt_builder.py` (`build_system_prompt`, line ~82)
 
 ```python
 def build_system_prompt(agent_config: dict, config: dict = None) -> str:
@@ -591,7 +591,7 @@ grep "get_active_session" workspace/.logs/system.log
 
 **Fix:**
 - Make sure `_cleanup_session()` does NOT call `complete_session()`
-- Code: `agent_task.py:343-346`
+- Code: `assistant/core/agent_task.py` (`_cleanup_session`, around line 363)
 
 ---
 
@@ -607,7 +607,7 @@ grep "get_active_session" workspace/.logs/system.log
 
 **Fix:**
 - `load_session_for_continue()` must call `reactivate_session()`
-- Code: `state.py:443-444`
+- Code: `assistant/core/state.py` (`load_session_for_continue`, around line 580)
 
 ---
 
@@ -628,7 +628,7 @@ grep "build_system_prompt" workspace/.logs/system.log
 
 **Fix:**
 - `build_system_prompt()` must be in `call_agent()`, not only on session start
-- Code: `ai_agent/claude_agent_sdk.py:536`
+- Code: `ai_agent/prompt_builder.py` (`build_system_prompt`)
 
 ---
 

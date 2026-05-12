@@ -104,13 +104,16 @@ Contains configuration, agents, skills, and knowledge that can be shared across 
 │   ├── system.json      # UI, logging, server settings
 │   ├── backends.json    # AI backend configurations
 │   ├── apis.json        # External API credentials
-│   ├── agents.json      # Agent definitions (fallback)
+│   ├── banking.json     # SEPA bank accounts
+│   ├── agents.json      # Agent definitions (legacy fallback)
 │   └── categories.json  # UI category definitions
 ├── agents/              # Custom agents (.md files)
 ├── skills/              # Custom skills (.md files)
 ├── knowledge/           # Knowledge base (.md files)
-└── templates/           # Custom templates
+└── mcp/                 # Custom MCP servers (optional)
 ```
+
+Note: `templates/` is always read from `DESKAGENT_DIR/templates/` (system, not user-overridable).
 
 **Default:** Parent of `deskagent/` folder (e.g., `C:\Users\you\deskagent-project\`)
 
