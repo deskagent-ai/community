@@ -61,10 +61,12 @@ After completion, `config/backends.json` is created with the configured backends
 
 ```json
 {
-  "default_ai": "claude_sdk",
+  "default_ai": "gemini",
+  "setup_completed": true,
   "ai_backends": {
     "claude_sdk": {
       "type": "claude_agent_sdk",
+      "api_key": "sk-ant-...",
       "permission_mode": "bypassPermissions",
       "anonymize": true
     },
@@ -86,9 +88,13 @@ After completion, `config/backends.json` is created with the configured backends
 
 ## Priority
 
-The backends are set as `default_ai` in this order:
-1. Claude SDK (if configured)
-2. Gemini (if Claude is not configured)
+The wizard only sets `default_ai` if it is not already present in `backends.json`:
+
+- If a **Gemini** API key is entered and `default_ai` is unset, it is set to `"gemini"`.
+- The wizard does **not** set `default_ai` to `claude_sdk` automatically, even if a Claude key is provided.
+- An existing `default_ai` value is preserved.
+
+To use Claude as the default, change `default_ai` manually in `config/backends.json` or via the Settings UI.
 
 ## Run Wizard Again
 

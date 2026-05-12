@@ -160,9 +160,9 @@ outlook_batch_email_actions([...])
 - `outlook_get_upcoming_events(days=7)` - Appointments for the next X days (default 7; pass 21 for 3 weeks)
 - `outlook_get_calendar_event_details` - Search appointment details by subject
 - `outlook_check_availability(date_str, start_time, end_time)` - Check if time slot is free
-- `outlook_create_appointment(subject, date, start, end, location, body)` - **Create appointment**
-- `outlook_create_meeting(subject, date, start, end, attendees, teams_meeting)` - **Meeting with attendees**
-- `outlook_create_teams_meeting(subject, date, start, end, attendees)` - **Create Teams meeting**
+- `outlook_create_appointment(subject, date_str, start_time, end_time, location="", body="", reminder_minutes=15)` - **Create appointment**
+- `outlook_create_meeting(subject, date_str, start_time, end_time, attendees, teams_meeting)` - **Meeting with attendees** (parameter names shorthand, see code for exact signature)
+- `outlook_create_teams_meeting(subject, date_str, start_time, end_time, attendees)` - **Create Teams meeting** (parameter names shorthand, see code for exact signature)
 
 **Calendar examples:**
 ```python
@@ -530,7 +530,7 @@ Calendar operations with the Google Calendar API.
 
 **Show appointments:**
 - `gcal_get_today_events()` - Today's appointments
-- `gcal_get_upcoming_events(days)` - Appointments for the next X days
+- `gcal_get_upcoming_events(days=7)` - Appointments for the next X days (default: 7)
 - `gcal_get_event_details(event_id)` - Full appointment details
 - `gcal_list_calendars()` - List all calendars
 - `gcal_check_availability(date, start_time, end_time)` - Check if time slot is free

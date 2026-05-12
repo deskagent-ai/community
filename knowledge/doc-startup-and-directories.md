@@ -275,14 +275,27 @@ Ensure `config/system.json` exists in the shared directory. DeskAgent falls back
 
 ### Python Not Found
 
-DeskAgent looks for Python in this order:
-1. `./python/python.exe` (embedded Python, populated by `setup-python.bat` on Windows or shipped by the signed installer)
-2. `./venv/bin/python` (created by `setup-unix.sh` on macOS/Linux)
-3. `py` (Python launcher on Windows)
-4. `python3.12` / `python3` / `python` from PATH
+At runtime, `paths.get_embedded_python()` only checks for a bundled
+interpreter under `./python/`:
 
-If none is found:
+- Windows: `./python/python.exe` (fallback `./python/pythonw.exe`)
+- macOS: `./python/bin/python3` (fallback `./python/bin/python`)
+- Linux: `./python/bin/python3`
+
+If nothing is found there, DeskAgent uses whatever Python interpreter the
+parent shell started it with (`sys.executable`). The launcher scripts
+prepare that interpreter *before* DeskAgent runs:
+
+- `start.sh` (macOS/Linux): activates `./venv/` if it exists, otherwise
+  uses `python3.12` / `python3` / `python` from PATH.
+- `start.bat` (Windows): uses `./python/python.exe` if present, otherwise
+  the `py` launcher or `python` from PATH.
+
+DeskAgent itself does **not** scan for a `venv/` directory at runtime -
+that resolution is done by the launcher script.
+
+If neither an embedded `./python/` nor a usable system Python is found:
 - Windows: run `setup-python.bat` (downloads embedded Python 3.12)
 - macOS/Linux: install Python 3.12 first (`brew install python@3.12`,
   `apt install python3.12`, or `dnf install python3.12`), then run
-  `./setup-unix.sh`.
+  `./setup-unix.sh` to create `./venv/`.

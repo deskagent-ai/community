@@ -84,6 +84,37 @@ Both files are merged at runtime - customer config extends system defaults.
 | `enabled` | false | Master switch for anonymization (off by default in Community Edition) |
 | `log_anonymization` | false | Log detected entities to system.log |
 
+### Proxy Tool Skip-Lists (system.json)
+
+The anonymizing MCP proxy supports per-tool opt-outs. Some tools return content that
+should not be anonymized (e.g. internal folder lists), and some tools should not have
+their input de-anonymized before the call (e.g. URL openers, where the real value must
+be passed through to the OS).
+
+```json
+"anonymization_proxy": {
+  "no_anonymize_output": [
+    "list_mail_folders",
+    "get_articles",
+    "search_article",
+    "get_today_events",
+    "get_upcoming_events"
+  ],
+  "no_deanonymize_input": [
+    "open_url",
+    "open_url_new_tab",
+    "open_url_new_window"
+  ]
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `no_anonymize_output` | List of tool names whose return values are passed through unchanged (no PII scrubbing on output) |
+| `no_deanonymize_input` | List of tool names whose input arguments are NOT de-anonymized before invocation (placeholders stay as placeholders) |
+
+Both lists are consumed by `mcp/anonymization_proxy_mcp.py` at proxy startup.
+
 ## Whitelist
 
 The whitelist prevents false positives where product names, company names, or technical terms get incorrectly anonymized.

@@ -89,24 +89,53 @@ External files/folders can be referenced with `@`:
 
 ## Configuration
 
-### In agents.json
+### In agent frontmatter
 
-```json
+Agents are configured via JSON frontmatter at the top of each agent's `.md` file.
+The `knowledge` field accepts the same pattern syntax as elsewhere in this document.
+
+**`agents/reply_email.md`:**
+```markdown
+---
 {
-  "reply_email": {
-    "ai": "claude_sdk",
-    "knowledge": "company|products|mailstyle"
-  },
-  "linkedin": {
-    "ai": "claude_sdk",
-    "knowledge": "linkedin"
-  },
-  "technical_agent": {
-    "ai": "claude_sdk",
-    "knowledge": ""
-  }
+  "ai": "claude_sdk",
+  "knowledge": "company|products|mailstyle"
 }
+---
+# Agent: Reply Email
+...
 ```
+
+**`agents/linkedin.md`:**
+```markdown
+---
+{
+  "ai": "claude_sdk",
+  "knowledge": "linkedin"
+}
+---
+# Agent: LinkedIn
+...
+```
+
+**`agents/technical_agent.md`** (loads no knowledge at all):
+```markdown
+---
+{
+  "ai": "claude_sdk",
+  "knowledge": ""
+}
+---
+# Agent: Technical Agent
+...
+```
+
+See [doc-agent-frontmatter-reference.md](doc-agent-frontmatter-reference.md) for the
+full list of frontmatter fields.
+
+!!! note "agents.json fallback"
+    `agents.json` is still supported as a fallback for agents that don't have a
+    `.md` file, but new agents should use frontmatter.
 
 ### Recommendations
 
@@ -196,6 +225,6 @@ print(load_knowledge(""))  # → ""
 
 ## Related Documentation
 
-- [Creating Agents](creating-agents.md) - Agent creation with knowledge
-- [System Architecture](system-architecture.md) - Overall architecture
-- [Config Reference](config-reference.md) - agents.json reference
+- [Creating Agents](doc-creating-agents.md) - Agent creation with knowledge
+- [Agent Frontmatter Reference](doc-agent-frontmatter-reference.md) - All frontmatter fields
+- [Config Reference](doc-config-reference.md) - Configuration reference

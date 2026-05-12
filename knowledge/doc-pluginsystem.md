@@ -17,11 +17,19 @@ plugins/
     │   └── my_skill.md          # -> "myplugin:my_skill"
     ├── knowledge/               # Knowledge .md files
     │   └── docs.md              # -> "@myplugin:docs"
-    └── mcp/                     # MCP server (simplified)
-        └── __init__.py          # -> "myplugin:myplugin"
+    └── mcp/                     # MCP server(s)
+        └── __init__.py          # Flat layout -> "myplugin:myplugin"
 ```
 
-**Note:** Each plugin has only ONE MCP server. The MCP name matches the plugin name.
+**MCP layouts:** A plugin may ship MCP servers in either layout (or both):
+
+| Layout | Path | Resulting MCP name |
+|--------|------|--------------------|
+| Flat (single MCP) | `<plugin>/mcp/__init__.py` | `myplugin:myplugin` |
+| Nested (multiple MCPs) | `<plugin>/mcp/<name>/__init__.py` | `myplugin:<name>` |
+
+Both are auto-discovered (see `plugins.py`, the discovery counts
+`nested_count + flat_count`).
 
 ## plugin.json Manifest
 
@@ -32,9 +40,16 @@ Each plugin requires a `plugin.json` file:
   "name": "myplugin",
   "version": "1.0.0",
   "description": "Plugin description",
-  "author": "Author Name"
+  "author": "Author Name",
+  "external_path": "E:\\path\\to\\plugin-resources"
 }
 ```
+
+**Optional fields:**
+
+| Field | Purpose |
+|-------|---------|
+| `external_path` | Absolute path to an out-of-tree folder holding `agents/`, `skills/`, `mcp/`, `knowledge/`. Used when the plugin is installed via a stub `plugin.json` but the actual resources live elsewhere (e.g. a checked-out dev repo). Local subfolders in the plugin directory still take precedence; `external_path` acts as a fallback. If the path does not exist, the plugin is loaded with an error. |
 
 ## Namespace Prefix
 
@@ -93,12 +108,22 @@ Plugin agents appear in the UI with prefix and can be executed normally:
 
 ## Creating a Plugin MCP Server
 
-Each plugin has at most ONE MCP server directly in the `mcp/` folder:
+A plugin can ship a single MCP server in the flat layout, or multiple
+MCP servers in the nested layout:
 
 ```
 myplugin/
 └── mcp/
-    └── __init__.py          # MCP server (simplified: directly here)
+    └── __init__.py          # Flat: one MCP, named like the plugin
+```
+
+```
+myplugin/
+└── mcp/
+    ├── service_a/
+    │   └── __init__.py      # Nested: myplugin:service_a
+    └── service_b/
+        └── __init__.py      # Nested: myplugin:service_b
 ```
 
 **mcp/__init__.py structure:**
@@ -189,13 +214,14 @@ User/system resources always take precedence over plugins.
 
 ```python
 from assistant.services.plugins import (
-    discover_plugins,      # Dict[name, PluginInfo]
-    get_plugin_agents,     # Dict[plugin, Dict[agent, data]]
-    get_plugin_skills,     # Dict[plugin, Dict[skill, data]]
-    get_plugin_mcp_dirs,   # List[(plugin_name, Path)]
-    get_plugin,            # Optional[PluginInfo]
-    list_plugins,          # List[dict]
-    clear_plugin_cache,    # Invalidate cache
+    discover_plugins,           # Dict[name, PluginInfo]
+    get_plugin_agents,          # Dict[plugin, Dict[agent, data]]
+    get_plugin_skills,          # Dict[plugin, Dict[skill, data]]
+    get_plugin_mcp_dirs,        # List[(plugin_name, Path)]
+    get_plugin_knowledge_dirs,  # List[(plugin_name, Path)] - knowledge folders
+    get_plugin,                 # Optional[PluginInfo]
+    list_plugins,               # List[dict]
+    clear_plugin_cache,         # Invalidate cache
 )
 ```
 

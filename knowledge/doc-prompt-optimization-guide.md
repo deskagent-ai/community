@@ -213,6 +213,5 @@ For Gemini ($1.25/1M input tokens):
 
 ## Further Documentation
 
-- [CLAUDE.md](../CLAUDE.md) - Full configuration reference
-- [docs/creating-agents.md](creating-agents.md) - Agent creation
-- [docs/agent-as-tool-architecture.md](agent-as-tool-architecture.md) - Agent tools
+- [doc-creating-agents.md](doc-creating-agents.md) - Agent creation
+- [doc-agent-frontmatter-reference.md](doc-agent-frontmatter-reference.md) - All frontmatter fields (incl. agent-as-tool)

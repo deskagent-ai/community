@@ -70,11 +70,14 @@ Groups the agent in the WebUI sidebar.
 
 | ID | Label | Icon |
 |----|-------|------|
+| `pinned` | Pinned | push_pin |
 | `chat` | Chat | chat |
 | `kommunikation` | Communication | forum |
 | `finance` | Finance | account_balance |
 | `sales` | Sales & Marketing | storefront |
+| `projekte` | Projects | work |
 | `system` | System | smart_toy |
+| `beta` | Beta | science |
 
 **Single category:**
 ```json
@@ -223,7 +226,7 @@ Specific AI model (optional). Overrides the backend's default model.
 |----------|-------------|----------------|
 | `claude-opus-4-6` | Claude Opus 4.6 (default) | $15/$75 |
 | `claude-sonnet-4-5-20250929` | Claude Sonnet 4.5 | $3/$15 |
-| `claude-haiku-4-5-20251001` | Claude Haiku 4.5 | $0.80/$4 |
+| `claude-haiku-4-5-20251001` | Claude Haiku 4.5 (experimental — not wired into bundled `config/backends.json`; verify the exact ID with Anthropic before use) | $0.80/$4 |
 
 ```json
 "model": "claude-sonnet-4-5-20250929"

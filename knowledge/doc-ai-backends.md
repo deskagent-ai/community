@@ -16,7 +16,7 @@ DeskAgent supports several AI backends with different strengths and pricing.
 | **openai** | GPT-5 (configurable) | API | $1.25/$10 | OpenAI standard model |
 | **mistral** | Mistral Large | API | $2/$6 | European provider |
 | **qwen** | Qwen | Ollama (local) | free | Offline, no API costs |
-| **claude** | Claude (CLI) | CLI | $3/$15 | Legacy, uses CLI instead of SDK |
+| **claude** | Claude (CLI) | CLI | $3/$15 | Legacy, uses CLI instead of SDK (ships with `enabled: false` in `backends.json`) |
 
 > **Note:** `claude_sdk` requires the optional `claude-agent-sdk` extra. Install via `pip install "deskagent[claude-sdk]"`. The wrapper degrades gracefully if the SDK is not installed.
 

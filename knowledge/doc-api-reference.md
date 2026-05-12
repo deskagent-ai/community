@@ -239,6 +239,8 @@ Get input field definitions for an agent.
 GET /agent/{agent_name}/inputs
 ```
 
+> **Note:** The internal/UI route uses **singular** `/agent/...`. The authenticated external API also exposes a **plural** variant at `GET /api/external/agents/{agent_name}/inputs` (requires `X-API-Key`). Both return the same payload.
+
 **Response:**
 ```json
 {
@@ -402,12 +404,36 @@ GET /system/info
 ```json
 {
   "version": "1.0.6",
+  "build": 123,
   "python": "3.12.0",
   "platform": "Windows 10",
   "uptime": "2h 30m",
   "paths": {
+    "executable": "C:/Program Files/DeskAgent",
+    "project": "C:/Users/user/DeskAgent",
+    "deskagent": "C:/Program Files/DeskAgent/deskagent",
     "workspace": "C:/Users/user/DeskAgent/workspace",
-    "config": "C:/Users/user/DeskAgent/config"
+    "shared": "C:/Users/user/DeskAgent/shared",
+    "config": "C:/Users/user/DeskAgent/config",
+    "logs": "C:/Users/user/DeskAgent/workspace/.logs",
+    "agents": "C:/Users/user/DeskAgent/agents",
+    "skills": "C:/Users/user/DeskAgent/skills",
+    "plugins": "C:/Users/user/DeskAgent/plugins"
+  },
+  "ports": {
+    "http": 8765,
+    "http_running": true,
+    "mcp_proxy": 8766,
+    "mcp_proxy_running": true,
+    "fastmcp": 19001,
+    "fastmcp_running": true
+  },
+  "mcp": {
+    "transport": "inprocess"
+  },
+  "public_api": {
+    "url": "http://localhost:8765/api/external",
+    "docs": "http://localhost:8765/api/external/docs"
   }
 }
 ```

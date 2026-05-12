@@ -106,16 +106,16 @@ Overview of all UI views, panels, and windows:
 | **Watcher Panel** | `#watcherPanel` / `.watcher-panel` | Watcher-Panel | Email watcher status and controls |
 | **Quick Access Window** | `?quickaccess` URL param | Schnellzugriff | Compact 280x500px overlay (separate window mode) |
 
-**System Panel Tabs:**
+**Settings Panel Tabs:**
 
-The System Panel contains multiple configuration tabs:
+The Settings Panel (opened via `openSettings()`) contains multiple configuration tabs:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │  System                                                              │
-│  ┌────────┬────────┬──────────┬─────────┬────────┬───────────┬─────┐│
-│  │ Lizenz │ Update │ Optionen │ Support │ System │ Microsoft │ ... ││
-│  └────────┴────────┴──────────┴─────────┴────────┴───────────┴─────┘│
+│  ┌──────┬────────┬────────┬──────────┬─────────┬────────┬─────┐     │
+│  │ Info │ Lizenz │ Update │ Optionen │ Support │ System │ ... │     │
+│  └──────┴────────┴────────┴──────────┴─────────┴────────┴─────┘     │
 │  ┌─────────────────────────────────────────────────────────────────┐│
 │  │                                                                 ││
 │  │  [Tab Content Area]                                             ││
@@ -126,15 +126,16 @@ The System Panel contains multiple configuration tabs:
 
 | Tab | German | Purpose |
 |-----|--------|---------|
+| **Info** | Info | About DeskAgent, version, open-source components |
 | **Lizenz** | License | License status, activation, device management |
 | **Update** | Update | Version info, update check, changelog |
 | **Optionen** | Options | General preferences, UI settings |
 | **Support** | Support | Help links, feedback, diagnostics |
 | **System** | System | System info, paths, environment |
-| **Microsoft** | Microsoft | Office 365/Graph API settings |
-| **Tests** | Tests | Development testing tools |
-| **Context** | Context | AI context window, token usage |
-| **Logs** | Logs | System logs, debug output |
+| **Anonymization** | Anonymization | PII anonymization settings, spaCy models |
+| **Integrationen** | Integrations | External service integrations |
+| **Tests** | Tests | Development testing tools (dev mode) |
+| **Logs** | Logs | System logs, agent log, anonymization log, context (sub-tabs; dev mode) |
 
 **Visual Hierarchy:**
 

@@ -285,8 +285,9 @@ Cloned tree on disk:
 │   ├── knowledge/            # System knowledge / developer docs
 │   ├── templates/            # System templates
 │   ├── config/               # Default config templates
-│   ├── python/               # Optional: Windows embedded Python (created by setup-python.bat)
-│   ├── venv/                 # Optional: Unix venv (created by setup-unix.sh)
+│   ├── python/               # Optional: embedded Python (Windows: python/python.exe via setup-python.bat;
+│   │                         #           Linux: python/bin/python3 shipped by installer)
+│   ├── venv/                 # Optional: Unix venv (created by setup-unix.sh, activated by start.sh)
 │   ├── start.bat / start.sh  # Launcher
 │   └── ...
 ```
@@ -328,7 +329,12 @@ The macOS build creates an app bundle. User data is stored in Application Suppor
     ├── MacOS/
     │   └── DeskAgent              # Compiled executable
     ├── Resources/                 # DESKAGENT_DIR (bundled data)
-    │   ├── python/venv/           # Python virtualenv for MCP
+    │   ├── python/bin/python3     # Bundled Python interpreter for MCP
+    │                              # (Note: paths.get_embedded_python() resolves
+    │                              #  python/bin/python3 directly - no venv/ subdir.
+    │                              #  Legacy assistant/platform.py:get_python_executable
+    │                              #  still references python/venv/bin/python3; paths.py
+    │                              #  is the canonical source.)
     │   ├── mcp/                   # MCP servers
     │   ├── agents/                # System agents (fallback)
     │   ├── skills/                # System skills (fallback)

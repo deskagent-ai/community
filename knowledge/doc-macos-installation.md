@@ -179,10 +179,16 @@ Next launch will recreate default folders.
 
 ### Requirements
 
-- Python 3.10+
+- Python 3.12 (recommended). 3.10/3.11 work, but the `[anonymizer]` extra requires 3.12.
 - Xcode Command Line Tools
 - Nuitka (for compiled builds)
 - create-dmg (optional, for DMG)
+
+!!! note "macOS build runs on macOS only"
+    The macOS build path uses `buildrelease/build-nuitka-macos.sh` and must be run
+    on an actual macOS host. The `--platform macos` flag in `build.py` is accepted
+    on other operating systems for configuration purposes, but the actual compile
+    step requires the macOS shell script and Xcode toolchain.
 
 ### Build Commands
 

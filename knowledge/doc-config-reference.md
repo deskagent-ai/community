@@ -214,7 +214,9 @@ AI backend API keys and configurations.
 
 ## .claude/settings.json
 
-Claude Code native permission settings. These are loaded automatically when using `claude_sdk` backend.
+Claude Code native permission settings.
+
+> **Note:** This file is loaded by the Claude Agent SDK from the current working directory, **not by DeskAgent itself**. DeskAgent does not read or parse `.claude/settings.json` - it is consumed by the underlying `claude-agent-sdk` / `claude` binary when the `claude_sdk` backend is invoked.
 
 ```json
 {
@@ -245,7 +247,7 @@ Claude Code native permission settings. These are loaded automatically when usin
 
 ### Per-Agent Settings
 
-Agents can use custom settings via `settings_file` frontmatter:
+> **Reserved / not yet implemented:** The `settings_file` frontmatter field shown below is documented as a planned feature but is **not currently consumed** by DeskAgent (no reader exists in `scripts/ai_agent/` or `scripts/assistant/`). Setting it has no effect today.
 
 ```json
 {
@@ -254,7 +256,7 @@ Agents can use custom settings via `settings_file` frontmatter:
 }
 ```
 
-This allows different permission levels for different agents.
+The intent is to allow different permission levels for different agents.
 
 ---
 
