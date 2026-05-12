@@ -88,9 +88,11 @@ Why this matters:
 - **Voice into Claude Code.** Hotkey + Whisper transcription, then
   DeskAgent forwards the task to Claude Code in the right project.
 
-See [knowledge/doc-mcp-tools.md](knowledge/doc-mcp-tools.md) for the
-full tool catalog and [knowledge/doc-setup-wizard.md](knowledge/doc-setup-wizard.md)
-for the Claude Desktop / Claude Code hook-up.
+See [knowledge/doc-claude-desktop-integration.md](knowledge/doc-claude-desktop-integration.md)
+for the full Claude Desktop / Claude Code hook-up (stdio vs HTTP transports,
+config paths per platform, troubleshooting), and
+[knowledge/doc-mcp-tools.md](knowledge/doc-mcp-tools.md) for the
+catalog of MCP tools available through the hub.
 
 ## Highlights
 
@@ -343,7 +345,8 @@ For developers and integrators:
 - [knowledge/doc-creating-agents.md](knowledge/doc-creating-agents.md) — build your own agent
 - [knowledge/doc-agent-frontmatter-reference.md](knowledge/doc-agent-frontmatter-reference.md) — agent frontmatter fields
 - [knowledge/doc-pluginsystem.md](knowledge/doc-pluginsystem.md) — plugin system
-- [knowledge/doc-anonymization.md](knowledge/doc-anonymization.md) — DSGVO anonymization
+- [knowledge/doc-claude-desktop-integration.md](knowledge/doc-claude-desktop-integration.md) — hooking DeskAgent into Claude Desktop and Claude Code as an MCP hub
+- [knowledge/doc-anonymization.md](knowledge/doc-anonymization.md) — GDPR anonymization
 - [knowledge/doc-licensing.md](knowledge/doc-licensing.md) — licensing details, including the AGPL Section 13 Notice
 
 ## How to install
