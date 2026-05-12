@@ -1,0 +1,36 @@
+# Force LF line endings for shell scripts and config files so a clone
+# on macOS or Linux doesn't break with "command not found" errors due
+# to CRLF line endings (a real report we got from a Mac user).
+# Without this, git's autocrlf setting on Windows can convert .sh files
+# to CRLF on commit, and they get re-checked-out as CRLF on Unix too.
+
+*.sh        text eol=lf
+*.bash      text eol=lf
+*.py        text eol=lf
+*.toml      text eol=lf
+*.cfg       text eol=lf
+*.ini       text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.json      text eol=lf
+*.md        text eol=lf
+
+# Batch and PowerShell files - keep CRLF (Windows convention)
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.ps1       text eol=crlf
+
+# Binaries - never touch
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.svg       text eol=lf
+*.pdf       binary
+*.zip       binary
+*.exe       binary
+*.dll       binary
+*.so        binary
+*.dylib     binary
+*.pyd       binary
