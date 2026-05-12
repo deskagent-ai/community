@@ -214,7 +214,7 @@ Platform initialization (`init_platform()`) handles platform-specific setup but 
 
 ## First-Run Directory Creation
 
-The installer does NOT create user folders. Directories are created **at runtime on first startup** by `ensure_first_run_setup()`. This ensures CLI parameters are respected.
+Neither `git clone` nor the signed installer create user folders themselves. Directories are created **at runtime on first startup** by `ensure_first_run_setup()`. This ensures CLI parameters are respected.
 
 **Shared directories created:**
 - `config/` - Configuration files
@@ -273,8 +273,13 @@ Ensure `config/system.json` exists in the shared directory. DeskAgent falls back
 ### Python Not Found
 
 DeskAgent looks for Python in this order:
-1. `../python/python.exe` (embedded Python from installer)
-2. `py` (Python launcher)
-3. `python` (PATH)
+1. `./python/python.exe` (embedded Python, populated by `setup-python.bat` on Windows or shipped by the signed installer)
+2. `./venv/bin/python` (created by `setup-unix.sh` on macOS/Linux)
+3. `py` (Python launcher on Windows)
+4. `python3.12` / `python3` / `python` from PATH
 
-Install Python 3.10+ or use the installer for embedded Python.
+If none is found:
+- Windows: run `setup-python.bat` (downloads embedded Python 3.12)
+- macOS/Linux: install Python 3.12 first (`brew install python@3.12`,
+  `apt install python3.12`, or `dnf install python3.12`), then run
+  `./setup-unix.sh`.
