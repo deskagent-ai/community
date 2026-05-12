@@ -158,7 +158,100 @@ For license issues:
 
 - **Email**: ask@deskagent.de
 
-**Note:** This document describes the **Commercial Edition** activation flow. In the
-**AGPL / Community Edition** (no `config/license.json`, no `app.license_api_url`
-configured) the License tab and all activation endpoints are served by the
-`NullLicenseProvider` and never perform network calls — no activation is required.
+---
+
+## AGPL-3.0 Community Edition
+
+When DeskAgent is run from source (the `deskagent-ai/community` GitHub
+repo), without a `config/license.json` and without an
+`app.license_api_url`, it operates in **AGPL-3.0 Community Edition**:
+
+- The License tab still appears, but all of its endpoints are served by
+  the `NullLicenseProvider`. They never call out to a license server.
+- `is_licensed()` always returns `true`, `edition` reads `agpl`, and
+  `check-agent` permits every agent.
+- Activation, deactivation, and offline-grace flows are no-ops (`activate`
+  responds with `{success: false, reason: "agpl_mode"}` so the UI button
+  is correctly disabled).
+- There is **nothing to register** — installing and running is enough.
+
+### When AGPL Section 13 obligations apply
+
+The AGPL-3.0 "remote network interaction" clause (Section 13) is the
+only meaningful obligation in the Community Edition. It triggers only
+when **both** of the following are true at the same time:
+
+1. You **modified** DeskAgent (changed any of the source files in this
+   repository), and
+2. You **offer the modified version to other users over a network** —
+   i.e. people other than you interact with your modified DeskAgent
+   remotely.
+
+Common scenarios in practice:
+
+| Scenario | Section 13 triggered? | What to do |
+|---|---|---|
+| Run unmodified DeskAgent locally on your own PC | No | Nothing |
+| Run DeskAgent on `localhost` only, you are the only user | No | Nothing |
+| Run modified DeskAgent for yourself only, no remote users | No | Nothing |
+| Run unmodified DeskAgent for a team behind your firewall, no source changes | No | Nothing |
+| Run **modified** DeskAgent and give a team / customers remote access | **Yes** | Provide the modified source to those users, or buy a Commercial License |
+| Host a public SaaS based on DeskAgent (modified or not, modifications usually accumulate) | **Yes** in practice | Same — provide source, or buy a Commercial License |
+
+The relevant code path is `bind_host` in
+[../scripts/assistant/server.py](../scripts/assistant/server.py).
+Setting the environment variable `DESKAGENT_BIND_HOST=0.0.0.0`
+exposes the local server to the network. When DeskAgent starts in
+that mode, it emits the following log message intentionally:
+
+```
+AGPL Section 13 Notice: Running in network mode.
+If you offer this service to remote users AND have modified DeskAgent,
+you must provide source code access to those users.
+```
+
+### How to comply if Section 13 applies
+
+Pick **one** of the following:
+
+1. **Publish your modified source.** A public Git fork (preserving the
+   AGPL header) satisfies the requirement. The link must be reachable
+   by the users of your modified instance.
+2. **Embed an offer in the UI.** Provide a clearly accessible link
+   from inside the running DeskAgent (e.g. an "About" panel entry)
+   pointing at the modified source.
+3. **Buy a Commercial License from realvirtual GmbH.** This removes
+   the AGPL obligations contractually so you can run modified
+   DeskAgent privately as a network service without publishing
+   changes. Contact info@realvirtual.io.
+
+### What is NOT a modification
+
+- Configuration files in `config/` are user data, not source modifications.
+- Custom agents/skills in your `agents/` and `skills/` directories are
+  your own work, not DeskAgent modifications.
+- New plugins under `plugins/` that use the documented Plugin API are
+  explicitly carved out by the **Plugin Exception** (see
+  [`../LICENSE`](../LICENSE)) and can be proprietary even when
+  installed alongside DeskAgent.
+- Running on `localhost` only — even with browser-based access on the
+  same machine — is not a "remote network interaction" in the AGPL
+  sense.
+
+### Source availability for the unmodified case
+
+Even with no modifications, you must make the AGPL license text and a
+pointer to the upstream source available to users of your network
+deployment (AGPL §1, "Corresponding Source"). The shipped
+[`../LICENSE`](../LICENSE) file and the link to
+`github.com/deskagent-ai/community` in
+[`../README.md`](../README.md) are sufficient for this.
+
+### Commercial Edition (this document)
+
+The sections above this notice describe the **Commercial Edition**
+activation flow. The Commercial License is what the buyer of a signed
+installer obtains. It removes the AGPL-3.0 source-disclosure obligation
+in exchange for a paid license, providing the same code under
+proprietary terms. Contact info@realvirtual.io for pricing and
+availability.
