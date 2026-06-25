@@ -45,15 +45,27 @@ def load_config() -> dict:
         Empty dict on API error.
     """
     if "config" not in _cache:
+        result = {}
         try:
             r = requests.get(f"{_BASE_URL}/api/mcp/config", timeout=_TIMEOUT)
             result = r.json() if r.ok else {}
-            if result:
-                _cache["config"] = result
-            return result
         except Exception as e:
             _warn(f"API not reachable ({_BASE_URL}): {e}")
-            return {}  # Do NOT cache empty results
+            result = {}
+        if not result:
+            # Fallback: DeskAgent app not running (standalone MCP usage, e.g.
+            # headless server) -> read local config files directly.
+            try:
+                from paths import load_config as _local_load_config
+                result = _local_load_config() or {}
+                if result:
+                    _warn("using local config fallback (DeskAgent app not running)")
+            except Exception as e:
+                _warn(f"local config fallback failed: {e}")
+                result = {}
+        if result:
+            _cache["config"] = result  # Only cache non-empty results
+        return result
     return _cache["config"]
 
 
