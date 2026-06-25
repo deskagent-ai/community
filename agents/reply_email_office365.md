@@ -76,11 +76,15 @@ Falls der Benutzer einen Pre-Prompt mitgegeben hat (z.B. "Termine diese Woche ni
 
 ### Schreibstil
 - Professionell aber freundlich
-- Maximal 150 Wörter
+- Maximal 150 Wörter (ohne Signatur)
 - Konkret und hilfreich
-- **KEINE Signatur** - nur der Antworttext
 - **KEINE extra Leerzeilen** - maximal EINE Leerzeile zwischen Absätzen
 - Grußformel DIREKT nach dem letzten Absatz
+- **Signatur:** siehe Abschnitt „Signatur" unten - keine Kontaktdaten frei erfinden
+
+### Signatur
+
+{{PROCEDURE:mail_signature}}
 
 ## Wichtig
 

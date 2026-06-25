@@ -2010,10 +2010,38 @@ class AllowedMcpsRequest(BaseModel):
 
 @router.post("/claude-desktop/allowed-mcps")
 async def set_allowed_mcps(body: AllowedMcpsRequest):
-    """Save allowed MCPs list for Claude Desktop to system.json."""
+    """Save allowed MCPs list for Claude Desktop to system.json.
+
+    Applies the change live: invalidates the proxy tool cache (so a newly
+    allowed MCP's tools are actually rebuilt) and restarts the hub if it is
+    running, so the package filter reflects the new whitelist immediately.
+    """
     from paths import save_system_setting
+    from config import load_config
 
     save_system_setting("claude_desktop.allowed_mcps", body.allowed_mcps)
     log(f"[ClaudeDesktop] allowed_mcps = {body.allowed_mcps}")
 
-    return {"status": "ok", "allowed_mcps": body.allowed_mcps}
+    # Invalidate the proxy tool cache - it only contains tools of modules that
+    # were loaded at build time, so adding a module requires a rebuild.
+    try:
+        from paths import get_temp_dir
+        cache_file = get_temp_dir() / "proxy_tool_cache.json"
+        if cache_file.exists():
+            cache_file.unlink()
+            log("[ClaudeDesktop] Proxy tool cache invalidated")
+    except Exception as e:
+        log(f"[ClaudeDesktop] Could not invalidate proxy cache: {e}")
+
+    # Restart the hub so the new whitelist takes effect without a full app restart.
+    hub_restarted = False
+    if load_config().get("claude_desktop", {}).get("hub_enabled", False):
+        try:
+            from services.mcp_proxy_manager import stop_mcp_proxy, start_hub_if_enabled
+            stop_mcp_proxy()
+            hub_restarted = start_hub_if_enabled()
+            log(f"[ClaudeDesktop] Hub restarted to apply allowed_mcps (ok={hub_restarted})")
+        except Exception as e:
+            log(f"[ClaudeDesktop] Failed to restart hub after allowed_mcps change: {e}")
+
+    return {"status": "ok", "allowed_mcps": body.allowed_mcps, "hub_restarted": hub_restarted}

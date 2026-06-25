@@ -4,9 +4,10 @@
 
 
 """
-FastAPI Routes for Audio Transcription (OpenAI Whisper).
+FastAPI Routes for Audio Transcription (OpenAI Speech-to-Text).
 
-Provides voice-to-text transcription via OpenAI's Whisper API.
+Provides voice-to-text transcription via OpenAI's transcription API.
+Supports gpt-4o-transcribe, gpt-4o-mini-transcribe and whisper-1.
 Only available when OpenAI API key is configured.
 """
 
@@ -16,6 +17,15 @@ from fastapi import APIRouter, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 
 router = APIRouter()
+
+# Per-minute audio pricing (USD). Used for cost tracking.
+# Source: https://openai.com/api/pricing/ (audio transcription)
+TRANSCRIPTION_PRICING_PER_MIN = {
+    "gpt-4o-transcribe": 0.006,
+    "gpt-4o-mini-transcribe": 0.003,
+    "whisper-1": 0.006,
+}
+DEFAULT_TRANSCRIPTION_MODEL = "gpt-4o-transcribe"
 
 
 def is_voice_available() -> tuple[bool, str | None]:
@@ -52,9 +62,18 @@ def is_voice_available() -> tuple[bool, str | None]:
     return (True, None)
 
 
+def get_transcription_model(config: dict) -> str:
+    """Return configured transcription model, falling back to default."""
+    voice_config = config.get("voice_input", {}) or {}
+    model = (voice_config.get("model") or "").strip()
+    if not model:
+        return DEFAULT_TRANSCRIPTION_MODEL
+    return model
+
+
 def build_whisper_prompt() -> str | None:
     """
-    Build Whisper prompt from knowledge base or config.
+    Build transcription prompt from knowledge base or config.
 
     Priority:
     1. knowledge/whisper_keywords.md (if exists)
@@ -154,7 +173,8 @@ async def get_transcription_status():
         "available": True,
         "reason": None,
         "auto_submit": voice_config.get("auto_submit", True),
-        "hotkey": voice_config.get("hotkey", "Ctrl+M")
+        "hotkey": voice_config.get("hotkey", "Ctrl+M"),
+        "model": get_transcription_model(config)
     }
 
 
@@ -246,10 +266,12 @@ async def transcribe_audio(audio: UploadFile = File(...)):
             # Assume 16kHz, 16-bit mono WAV = ~32KB per second
             audio_duration_seconds = len(audio_content) / 32000
 
+        model_name = get_transcription_model(config)
+
         with open(tmp_path, "rb") as audio_file:
             # Build API call parameters
             api_params = {
-                "model": "whisper-1",
+                "model": model_name,
                 "file": audio_file,
             }
 
@@ -267,18 +289,19 @@ async def transcribe_audio(audio: UploadFile = File(...)):
         text = transcript.text.strip()
         log(f"[Transcribe] Result: {len(text)} chars - '{text[:50]}...'")
 
-        # Track cost (Whisper: $0.006 per minute = $0.0001 per second)
+        # Track cost based on selected model
         audio_minutes = audio_duration_seconds / 60.0
-        cost_usd = audio_minutes * 0.006
+        price_per_min = TRANSCRIPTION_PRICING_PER_MIN.get(model_name, 0.006)
+        cost_usd = audio_minutes * price_per_min
 
         try:
             from ..cost_tracker import add_cost
             add_cost(
                 cost_usd=cost_usd,
                 audio_seconds=audio_duration_seconds,
-                model="whisper-1",
+                model=model_name,
                 task_type="transcription",
-                backend="whisper"
+                backend="openai"
             )
             log(f"[Transcribe] Cost tracked: ${cost_usd:.6f} ({audio_duration_seconds:.1f}s)")
         except Exception as e:

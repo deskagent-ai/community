@@ -134,6 +134,8 @@ DESTRUCTIVE_TOOLS = {
     # Offers
     "billomat_create_offer",
     "billomat_add_offer_item",
+    "billomat_update_offer_item",
+    "billomat_delete_offer_item",
     "billomat_finalize_offer",
     "billomat_create_complete_offer",
     # Confirmations
@@ -167,6 +169,8 @@ DESTRUCTIVE_TOOLS = {
     "billomat_delete_confirmation",
     # Payments
     "billomat_mark_invoice_paid",
+    # Storno (finalisierte Rechnung -> CANCELED)
+    "billomat_cancel_invoice",
     # PDF Downloads (create files)
     "billomat_download_offer_pdf",
     "billomat_download_invoice_pdf",
@@ -428,6 +432,21 @@ def api_request(endpoint: str, method: str = "GET", data: dict = None) -> dict:
         headers["X-AppSecret"] = app_secret
 
     body = json.dumps(data).encode("utf-8") if data else None
+
+    # Billomat parst bei mutierenden Requests (POST/PUT) den Body als JSON,
+    # sobald Content-Type: application/json gesetzt ist. Ein body-loser
+    # POST/PUT liefert sonst HTTP 400
+    # {"errors":{"error":"error while reading input data"}}. Daher immer ein
+    # leeres JSON-Objekt mitsenden, wenn kein expliziter Body vorhanden ist.
+    #
+    # WICHTIG: Aktions-Endpoints, die einen benannten Wurzel-Knoten lesen,
+    # brauchen genau diesen Wrapper, nicht bloss {}. Insbesondere /complete
+    # liest den "complete"-Knoten -> die finalize_*-Tools senden explizit
+    # {"complete": {}}. Reine Aktionen ohne Parameter (z.B. /cancel) sind
+    # mit {} zufrieden.
+    if body is None and method in ("POST", "PUT"):
+        body = b"{}"
+
     req = urllib.request.Request(url, data=body, headers=headers, method=method)
 
     try:
@@ -1025,6 +1044,7 @@ def billomat_add_offer_item(
     offer_id: int,
     article_number: str,
     quantity: int = 1,
+    unit_price: float = None,
     description: str = ""
 ) -> str:
     """Fügt einen Artikel zum Angebot hinzu.
@@ -1033,6 +1053,8 @@ def billomat_add_offer_item(
         offer_id: Die Angebots-ID
         article_number: Artikelnummer des Artikels
         quantity: Anzahl (Standard: 1)
+        unit_price: Optionaler Einzelpreis in Euro. Überschreibt den
+            Artikel-Stammpreis (sales_price) nur für diese Position.
         description: Optionale zusätzliche Beschreibung
     """
     # Zuerst Artikel-ID anhand der Artikelnummer finden
@@ -1056,6 +1078,9 @@ def billomat_add_offer_item(
         "quantity": quantity
     }
 
+    if unit_price is not None:
+        item_data["unit_price"] = unit_price
+
     if description:
         item_data["description"] = description
 
@@ -1067,10 +1092,12 @@ def billomat_add_offer_item(
     item = result.get("offer-item", {})
     edit_url = _build_edit_url("offers", offer_id)
 
+    used_price = unit_price if unit_price is not None else article.get('sales_price', '0')
+
     return f"""Artikel hinzugefügt!
 - Artikel: {article.get('title')}
 - Anzahl: {quantity}
-- Einzelpreis: {article.get('sales_price', '0')}€
+- Einzelpreis: {used_price}€
 - Position-ID: {item.get('id')}
 
 Angebot bearbeiten: {edit_url}"""
@@ -1103,6 +1130,78 @@ def billomat_get_offer_items(offer_id: int) -> str:
 
 
 @mcp.tool()
+def billomat_update_offer_item(
+    item_id: int,
+    unit_price: float = None,
+    quantity: float = None,
+    title: str = "",
+    unit: str = "",
+    description: str = ""
+) -> str:
+    """Aktualisiert eine Angebotsposition.
+
+    WICHTIG: Nur bei Angeboten im DRAFT Status möglich!
+
+    Args:
+        item_id: Die Positions-ID (nicht Angebots-ID!)
+        unit_price: Neuer Einzelpreis in Euro (optional)
+        quantity: Neue Menge (optional)
+        title: Neuer Titel (optional)
+        unit: Neue Einheit (optional)
+        description: Neue Beschreibung (optional)
+    """
+    item_data = {}
+
+    if unit_price is not None:
+        item_data["unit_price"] = unit_price
+    if quantity is not None:
+        item_data["quantity"] = quantity
+    if title:
+        item_data["title"] = title
+    if unit:
+        item_data["unit"] = unit
+    if description:
+        item_data["description"] = description
+
+    if not item_data:
+        return "Fehler: Keine Daten zum Aktualisieren angegeben"
+
+    result = api_request(f"offer-items/{item_id}", "PUT", {"offer-item": item_data})
+
+    if "error" in result:
+        return f"Fehler: {result['error']}"
+
+    item = result.get("offer-item", {})
+    qty = float(item.get("quantity", 1))
+    price = float(item.get("unit_price", 0))
+    line_total = qty * price
+
+    return f"""Position #{item_id} aktualisiert!
+- Titel: {item.get('title', '-')}
+- Menge: {qty} {item.get('unit', '')}
+- Einzelpreis: {price}€
+- Gesamt: {line_total}€"""
+
+
+@mcp.tool()
+def billomat_delete_offer_item(item_id: int) -> str:
+    """Löscht eine Angebotsposition.
+
+    WICHTIG: Nur bei Angeboten im DRAFT Status möglich!
+    Nach dem Löschen werden die verbleibenden Positionen automatisch neu nummeriert.
+
+    Args:
+        item_id: Die Positions-ID (nicht Angebots-ID!)
+    """
+    result = api_request(f"offer-items/{item_id}", "DELETE")
+
+    if "error" in result:
+        return f"Fehler: {result['error']}"
+
+    return f"Position #{item_id} erfolgreich gelöscht."
+
+
+@mcp.tool()
 def billomat_finalize_offer(offer_id: int) -> str:
     """Finalisiert ein Angebot (Status → OPEN/gesendet).
 
@@ -1114,7 +1213,7 @@ def billomat_finalize_offer(offer_id: int) -> str:
     """
     billomat_id, _, _, _ = get_config()
 
-    result = api_request(f"offers/{offer_id}/complete", "PUT")
+    result = api_request(f"offers/{offer_id}/complete", "PUT", {"complete": {}})
 
     if "error" in result:
         return f"Fehler: {result['error']}"
@@ -1650,7 +1749,7 @@ def billomat_finalize_confirmation(confirmation_id: int) -> str:
                     f"fehlgeschlagen: {patch['error']}"
                 )
 
-    result = api_request(f"confirmations/{confirmation_id}/complete", "PUT")
+    result = api_request(f"confirmations/{confirmation_id}/complete", "PUT", {"complete": {}})
     if "error" in result:
         return f"Fehler: {result['error']}"
 
@@ -1700,7 +1799,7 @@ def billomat_finalize_invoice(invoice_id: int) -> str:
                     f"{today} fehlgeschlagen: {patch['error']}"
                 )
 
-    result = api_request(f"invoices/{invoice_id}/complete", "PUT")
+    result = api_request(f"invoices/{invoice_id}/complete", "PUT", {"complete": {}})
     if "error" in result:
         return f"Fehler: {result['error']}"
 
@@ -1918,7 +2017,7 @@ def billomat_create_complete_confirmation_from_offer(
     if not finalize:
         return "\n".join(output)
 
-    finalize_result = api_request(f"confirmations/{confirmation_id}/complete", "PUT")
+    finalize_result = api_request(f"confirmations/{confirmation_id}/complete", "PUT", {"complete": {}})
     if "error" in finalize_result:
         output.append(f"Warnung: Finalisierung fehlgeschlagen: {finalize_result['error']}")
         return "\n".join(output)
@@ -2710,7 +2809,7 @@ def _finalize_and_download_invoice(
                     f"{patch['error']}"
                 )
 
-    finalize_result = api_request(f"invoices/{invoice_id}/complete", "PUT")
+    finalize_result = api_request(f"invoices/{invoice_id}/complete", "PUT", {"complete": {}})
     if "error" in finalize_result:
         output.append(f"Warnung: Finalisierung fehlgeschlagen: {finalize_result['error']}")
         return output
@@ -3705,6 +3804,63 @@ def billomat_mark_invoice_paid(invoice_id: int, payment_type: str = "BANK_TRANSF
 - Neuer Status: PAID"""
 
 
+@mcp.tool()
+def billomat_cancel_invoice(invoice_id: int) -> str:
+    """Storniert eine finalisierte Rechnung (OPEN/OVERDUE/PAID -> CANCELED).
+
+    Eine bereits finalisierte Rechnung kann NICHT mehr bearbeitet werden.
+    Bei falschem Inhalt (Text, Positionen, Sprache) ist der korrekte Weg:
+    stornieren und neu anlegen. Die Rechnungsnummer bleibt zur lückenlosen
+    Nummerierung erhalten; die Rechnung wird als 'Storniert' markiert.
+
+    WICHTIG: Diese Aktion kann nicht rückgängig gemacht werden!
+    Entwürfe (DRAFT) werden nicht storniert, sondern mit
+    billomat_delete_invoice gelöscht.
+
+    Typischer Storno-und-Neu-Workflow:
+      1. billomat_cancel_invoice(<alte_id>)
+      2. neue Rechnung anlegen (billomat_create_invoice /
+         billomat_create_invoice_from_offer / ...)
+      3. Texte/Free-Text setzen, dann billomat_finalize_invoice(<neue_id>)
+
+    Args:
+        invoice_id: Die Rechnungs-ID
+
+    Returns:
+        Bestätigung mit neuem Status
+    """
+    info = api_request(f"invoices/{invoice_id}")
+    if "error" in info:
+        return f"Fehler: {info['error']}"
+
+    inv = info.get("invoice", {})
+    status = inv.get("status", "")
+    inv_number = inv.get("invoice_number", "") or str(invoice_id)
+
+    if status == "CANCELED":
+        return f"Rechnung {inv_number} ist bereits storniert."
+    if status == "DRAFT":
+        return (
+            f"Rechnung {inv_number} ist noch ein Entwurf (DRAFT) - bitte mit "
+            f"billomat_delete_invoice({invoice_id}) löschen statt stornieren."
+        )
+
+    result = api_request(f"invoices/{invoice_id}/cancel", "PUT")
+    if "error" in result:
+        return f"Fehler beim Stornieren: {result['error']}"
+
+    after = api_request(f"invoices/{invoice_id}").get("invoice", {})
+    return (
+        f"Rechnung storniert!\n"
+        f"- ID: {invoice_id}\n"
+        f"- Rechnungsnummer: {inv_number}\n"
+        f"- Neuer Status: {after.get('status', 'CANCELED')}\n\n"
+        f"Für eine korrekte Rechnung jetzt neu anlegen "
+        f"(billomat_create_invoice / billomat_create_invoice_from_offer), "
+        f"Free-Text/Texte setzen und finalisieren."
+    )
+
+
 # =============================================================================
 # Batch-Tools für Performance-Optimierung
 # =============================================================================
@@ -3790,7 +3946,7 @@ def billomat_create_complete_offer(
     # 3. Optional finalisieren
     offer_number = "-"
     if finalize and added_items:
-        complete_result = api_request(f"offers/{offer_id}/complete", "PUT")
+        complete_result = api_request(f"offers/{offer_id}/complete", "PUT", {"complete": {}})
         if "error" not in complete_result:
             offer_data = api_request(f"offers/{offer_id}")
             offer_number = offer_data.get("offer", {}).get("offer_number", "-")

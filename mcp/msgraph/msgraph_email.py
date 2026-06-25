@@ -10,6 +10,7 @@ Email search, read, and management tools.
 """
 
 import base64
+import html as _html
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -49,6 +50,36 @@ try:
 except ImportError:
     def strip_markdown_fences(text):
         return text
+
+
+def _plaintext_to_html(text: str) -> str:
+    """Konvertiert Plain-Text zu HTML fuer Graph createReply 'comment'-Param.
+
+    Graph fuegt 'comment' in einen HTML-Body ein; \\n kollabieren dort zu
+    Whitespace. Wir escapen Sonderzeichen und mappen Absaetze auf <p>/<br>.
+
+    Das Ergebnis wird in einen Calibri-Wrapper gepackt: Outlook rendert
+    'comment'-HTML ohne font-family in seinem Default (Times New Roman),
+    nicht in der Hausschrift. Der Wrapper erzwingt Calibri 11pt fuer den
+    neu eingefuegten Text; das gequotete Original behaelt seine Schrift.
+    """
+    if not text:
+        return ""
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    parts = []
+    for paragraph in normalized.split("\n\n"):
+        if not paragraph.strip():
+            continue
+        escaped = _html.escape(paragraph, quote=False).replace("\n", "<br>")
+        parts.append(f"<p>{escaped}</p>")
+    body_inner = "".join(parts)
+    if not body_inner:
+        return ""
+    return (
+        '<div style="font-family:Calibri,Helvetica,sans-serif;'
+        'font-size:11pt;color:#000000">'
+        f"{body_inner}</div>"
+    )
 
 
 # =============================================================================
@@ -908,6 +939,9 @@ def graph_create_reply_draft(
     """
     # Clean markdown fences from agent output
     body = strip_markdown_fences(body) if body else ""
+    # Graph fuegt 'comment' in HTML-Body ein -> Plain-Text muss HTML werden,
+    # sonst kollabieren \n zu Whitespace (Textwand in Outlook).
+    body_html = _plaintext_to_html(body)
 
     try:
         base = _message_base(message_id, mailbox)
@@ -918,8 +952,8 @@ def graph_create_reply_draft(
         # Doku: https://learn.microsoft.com/graph/api/message-createreplyall
         endpoint = f"{base}/createReplyAll" if reply_all else f"{base}/createReply"
         payload: dict = {}
-        if body:
-            payload["comment"] = body
+        if body_html:
+            payload["comment"] = body_html
 
         result = graph_request(endpoint, method="POST", json_body=payload)
         draft_id = result.get("id", "")
@@ -951,7 +985,7 @@ def graph_create_reply_draft(
 
         location = f"{mailbox}/Drafts" if mailbox else "Drafts"
         lines = [f"Reply draft created in {location}. ID: {draft_id}"]
-        if body:
+        if body_html:
             lines.append(f"Body: {len(body)} Zeichen eingefuegt via 'comment'-Param")
 
         if attachments:

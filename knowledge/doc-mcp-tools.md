@@ -190,6 +190,7 @@ For a complete search of all emails on the Exchange server, use Microsoft Graph:
 - `graph_get_recent_emails(days, limit, inbox_only=True)` - Fetch newest emails (default: only Inbox)
 - `graph_get_flagged_emails(limit, include_completed, mailbox)` - **Flagged emails from Office 365** (for "selection" via flag)
 - `graph_get_folder_emails(folder_name, limit, mailbox)` - **Emails from folder** (ToOffer, ToPay, DoneInvoices)
+- `graph_get_emails_by_category(category, folder="Inbox", mailboxes=None, limit=50)` - **Emails by category** (for "selection" via category). Default searches only the Inbox. `mailboxes` is a comma-separated list to query several mailboxes at once; `folder=None`/`""`/`"all"` searches the entire mailbox.
 - `graph_get_email(message_id)` - Read full email content
 - `graph_get_attachments(message_id)` - **List attachments of an email**
 - `graph_download_attachment(message_id, attachment_id, save_path)` - **Download attachment**
@@ -249,6 +250,20 @@ graph_get_email("AAMk...")
 
 # 5. Remove flag when done
 graph_flag_email("AAMk...", "notFlagged")
+```
+
+**Workflow: Find "ToReply" emails across multiple inboxes**
+```python
+# Single deterministic call - only Inbox folders, both mailboxes merged:
+graph_get_emails_by_category(
+    category="ToReply",
+    folder="Inbox",
+    mailboxes="thomas@realvirtual.io,info@realvirtual.io"
+)
+# → {"category": "ToReply", "count": 3, "mailboxes_searched": [...],
+#    "emails": [{"id": "AAMk...", "mailbox": "thomas@realvirtual.io", ...}, ...]}
+# If one mailbox fails (e.g. no permission), the others still return and the
+# failure appears under "errors". Use folder=None/"all" to search all folders.
 ```
 
 ## Microsoft Graph - Calendar
@@ -812,8 +827,10 @@ imap_batch_actions('[
 - `billomat_create_offer` - Create quote (draft)
 - `billomat_get_offer` - Retrieve quote details
 - `billomat_get_recent_offers` - Most recent quotes
-- `billomat_add_offer_item` - Add product to quote
+- `billomat_add_offer_item(offer_id, article_number, quantity, unit_price, description)` - Add product to quote (`unit_price` optional: overrides the article master price for this item only)
 - `billomat_get_offer_items` - Show quote items
+- `billomat_update_offer_item` - Update quote item (DRAFT only)
+- `billomat_delete_offer_item` - Delete quote item (DRAFT only)
 - `billomat_finalize_offer(offer_id)` - **Finalize quote** (status → OPEN)
 - `billomat_download_offer_pdf(offer_id)` - **Download PDF** (for email attachment)
 

@@ -171,6 +171,21 @@ def _start_fastmcp(transport_override: str | None = None) -> bool:
         "--port", str(fastmcp_port)
     ]
 
+    # Derive the package filter LIVE from claude_desktop.allowed_mcps so the hub
+    # always reflects the "Allowed MCP Servers" whitelist from the UI. Without this
+    # the proxy would fall back to a stale ALLOWED_MCP_PATTERN inherited from the
+    # app environment (frozen at app launch). The proxy turns --filter into
+    # ALLOWED_MCP_PATTERN, overriding any inherited value.
+    try:
+        from config import load_config
+        allowed = load_config().get("claude_desktop", {}).get("allowed_mcps")
+        if allowed and isinstance(allowed, list):
+            filter_pattern = "|".join(allowed)
+            cmd += ["--filter", filter_pattern]
+            system_log(f"[MCP Proxy] Package filter from allowed_mcps: {filter_pattern}")
+    except Exception as e:
+        system_log(f"[MCP Proxy] Could not derive package filter from config: {e}")
+
     system_log(f"[MCP Proxy] Starting FastMCP on port {fastmcp_port} (transport: {transport})")
 
     try:

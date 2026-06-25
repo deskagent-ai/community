@@ -345,27 +345,52 @@ def graph_list_categories(mailbox: str = None) -> str:
 
 @mcp.tool()
 @require_auth
-def graph_get_emails_by_category(category: str, limit: int = 50, mailbox: str = None) -> str:
+def graph_get_emails_by_category(category: str, folder: str = "Inbox", mailboxes: str = None, limit: int = 50) -> str:
     """Get emails with a specific category via Microsoft Graph API.
 
     Use this to "select" emails for processing - assign them a category
     in any Outlook client (web, mobile, desktop), then retrieve them here.
 
+    By default ONLY the Inbox folder is searched, so finding e.g. "ToReply"
+    emails works with a single deterministic call without needing to build an
+    "inbox intersection" yourself. Multiple mailboxes can be queried at once.
+
     Args:
-        category: Category name (e.g., "DeskAgent", "To Reply")
-        limit: Maximum results (default: 50)
-        mailbox: Optional mailbox (default: signed-in user)
+        category: Category name (e.g., "DeskAgent", "ToReply")
+        folder: Folder scope (default: "Inbox"). Use "Inbox" to search only the
+                Inbox, a specific folder name like "Archive", or None/""/"all" to
+                search the entire mailbox (all folders) like before.
+        mailboxes: Comma-separated mailbox addresses to search, e.g.
+                   "thomas@realvirtual.io,info@realvirtual.io". None/empty searches
+                   the signed-in user (/me). Each returned email carries a "mailbox"
+                   field indicating which mailbox it came from.
+        limit: Maximum results per mailbox (default: 50, capped at 250)
 
     Returns:
-        JSON with emails that have the specified category
+        JSON with: category, count (total across mailboxes), mailboxes_searched,
+        emails (each with mailbox field) and optionally errors (per-mailbox).
+
+    Example (find ToReply across two inboxes):
+        graph_get_emails_by_category(
+            category="ToReply",
+            folder="Inbox",
+            mailboxes="thomas@realvirtual.io,info@realvirtual.io"
+        )
     """
     try:
         limit = min(limit, 250)
 
-        if mailbox:
-            endpoint = f"/users/{mailbox}/messages"
+        # Resolve folder scope into endpoint suffix
+        if not folder or str(folder).strip().lower() == "all":
+            folder_suffix = "/messages"
         else:
-            endpoint = "/me/messages"
+            folder_suffix = f"/mailFolders/{folder}/messages"
+
+        # Resolve mailbox list (None/empty -> signed-in user via /me)
+        if mailboxes and mailboxes.strip():
+            mailbox_list = [m.strip() for m in mailboxes.split(",") if m.strip()]
+        else:
+            mailbox_list = [None]  # signed-in user
 
         # Filter for emails with the category
         # Categories is a collection, use 'any' lambda
@@ -378,34 +403,61 @@ def graph_get_emails_by_category(category: str, limit: int = 50, mailbox: str = 
             "$orderby": "receivedDateTime desc"
         }
 
-        result = graph_request(endpoint, params=params)
+        all_emails = []
+        mailboxes_searched = []
+        errors = []
 
-        if "error" in result:
-            error = result["error"]
-            return json.dumps({"error": error.get("message", "Unknown error"), "emails": []}, indent=2)
+        for mb in mailbox_list:
+            if mb:
+                endpoint = f"/users/{mb}{folder_suffix}"
+                mb_label = mb
+            else:
+                endpoint = f"/me{folder_suffix}"
+                mb_label = ""  # signed-in user, no extra /me request just for the address
 
-        messages = result.get("value", [])
+            mailboxes_searched.append(mb or "/me")
 
-        emails = []
-        for msg in messages:
-            sender_data = msg.get("from", {}).get("emailAddress", {})
+            try:
+                result = graph_request(endpoint, params=params)
+            except Exception as e:
+                mcp_log(f"[MsGraph] Get emails by category error for mailbox '{mb or '/me'}': {e}")
+                errors.append({"mailbox": mb or "/me", "error": str(e)})
+                continue
 
-            emails.append({
-                "id": msg.get("id", ""),
-                "entry_id": msg.get("id", ""),  # Alias for compatibility
-                "subject": msg.get("subject", "(No subject)"),
-                "sender_name": sender_data.get("name", "Unknown"),
-                "sender_email": sender_data.get("address", ""),
-                "received": msg.get("receivedDateTime", "")[:10],
-                "categories": msg.get("categories", []),
-                "has_attachments": msg.get("hasAttachments", False)
-            })
+            if "error" in result:
+                error = result["error"]
+                err_msg = error.get("message", "Unknown error")
+                mcp_log(f"[MsGraph] Get emails by category error for mailbox '{mb or '/me'}': {err_msg}")
+                errors.append({"mailbox": mb or "/me", "error": err_msg})
+                continue
 
-        return json.dumps({
+            messages = result.get("value", [])
+
+            for msg in messages:
+                sender_data = msg.get("from", {}).get("emailAddress", {})
+
+                all_emails.append({
+                    "id": msg.get("id", ""),
+                    "entry_id": msg.get("id", ""),  # Alias for compatibility
+                    "subject": msg.get("subject", "(No subject)"),
+                    "sender_name": sender_data.get("name", "Unknown"),
+                    "sender_email": sender_data.get("address", ""),
+                    "received": msg.get("receivedDateTime", "")[:10],
+                    "categories": msg.get("categories", []),
+                    "has_attachments": msg.get("hasAttachments", False),
+                    "mailbox": mb_label
+                })
+
+        response = {
             "category": category,
-            "count": len(emails),
-            "emails": emails
-        }, ensure_ascii=False, indent=2)
+            "count": len(all_emails),
+            "mailboxes_searched": mailboxes_searched,
+            "emails": all_emails
+        }
+        if errors:
+            response["errors"] = errors
+
+        return json.dumps(response, ensure_ascii=False, indent=2)
 
     except Exception as e:
         mcp_log(f"[MsGraph] Get emails by category error: {e}")

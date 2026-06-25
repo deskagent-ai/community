@@ -78,6 +78,7 @@
   },
   "voice_input": {
     "enabled": true,
+    "model": "gpt-4o-transcribe",
     "language": "de",
     "auto_submit": true,
     "hotkey": "Ctrl+M",

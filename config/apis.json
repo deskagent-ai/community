@@ -60,10 +60,10 @@
   },
   "paperless": {
     "enabled": true,
-    "url": "http://localhost:8000",
-    "token": "",
-    "username": "admin",
-    "password": "password",
+    "url": "http://docker.local:8000",
+    "token": "71b9459552ad5b8f3946c9f850bc6e16eaaf4cf7",
+    "username": "",
+    "password": "",
     "api_version": 5
   }
 }
