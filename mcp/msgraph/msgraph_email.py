@@ -71,10 +71,15 @@ def _plaintext_to_html(text: str) -> str:
         if not paragraph.strip():
             continue
         escaped = _html.escape(paragraph, quote=False).replace("\n", "<br>")
-        parts.append(f"<p>{escaped}</p>")
-    body_inner = "".join(parts)
-    if not body_inner:
+        parts.append(escaped)
+    if not parts:
         return ""
+    # Absaetze mit einer echten Leerzeile trennen. Outlook (Word-Engine) rendert
+    # die Raender von <p> im eingefuegten 'comment'-HTML oft als 0, wodurch alle
+    # Absaetze (auch Anrede und Text) ohne Abstand aneinanderkleben. <br><br>
+    # erzeugt dagegen zuverlaessig eine Leerzeile zwischen den Absaetzen, waehrend
+    # einzelne \n innerhalb eines Absatzes weiterhin nur ein <br> sind.
+    body_inner = "<br><br>".join(parts)
     return (
         '<div style="font-family:Calibri,Helvetica,sans-serif;'
         'font-size:11pt;color:#000000">'
@@ -599,6 +604,9 @@ def graph_get_folder_emails(folder_name: str, limit: int = 50, mailbox: str = No
         params = {
             "$top": min(limit, 250),
             "$select": "id,subject,from,receivedDateTime,isRead,hasAttachments,conversationId,flag,webLink",
+            # PidTagLastVerbExecuted (0x1081): liefert den Outlook-"Beantwortet"-Marker mit,
+            # damit Triage Regel 1 ("schon beantwortet?") ohne teure Sent-Items-Suche auskommt.
+            "$expand": "singleValueExtendedProperties($filter=id eq 'Integer 0x1081')",
             "$orderby": "receivedDateTime desc"
         }
 
@@ -618,6 +626,18 @@ def graph_get_folder_emails(folder_name: str, limit: int = 50, mailbox: str = No
             flag_status = msg.get("flag", {}).get("flagStatus", "notFlagged")
             msg_id = msg.get("id", "")
 
+            # Outlook-"Beantwortet"-Marker aus PidTagLastVerbExecuted (0x1081):
+            # 102 = beantwortet, 103 = allen geantwortet, 104 = weitergeleitet.
+            # Spart die Sent-Items-Suche pro Mail (rv-triage Regel 1).
+            last_verb = 0
+            for p in (msg.get("singleValueExtendedProperties") or []):
+                if str(p.get("id", "")).lower().endswith("0x1081"):
+                    try:
+                        last_verb = int(p.get("value", 0))
+                    except (TypeError, ValueError):
+                        last_verb = 0
+            replied = last_verb in (102, 103)
+
             # V2 Link System: Register URL, only expose link_ref to AI
             link_ref = make_link_ref(msg_id, LINK_TYPE_EMAIL)
             web_link = msg.get("webLink", "")
@@ -636,6 +656,7 @@ def graph_get_folder_emails(folder_name: str, limit: int = 50, mailbox: str = No
                 "is_read": msg.get("isRead", False),
                 "has_attachments": msg.get("hasAttachments", False),
                 "flag_status": flag_status,  # "notFlagged", "flagged", or "complete"
+                "replied": replied,  # True = schon beantwortet (Outlook lastVerb 102/103), spart Sent-Items-Suche
             })
 
         return json.dumps({
