@@ -161,6 +161,85 @@ def graph_move_email(message_id: str, folder: str, mailbox: str = None) -> str:
 
 @mcp.tool()
 @require_auth
+def graph_move_email_cross_mailbox(
+    message_id: str,
+    source_mailbox: str,
+    dest_mailbox: str,
+    dest_folder: str = "Inbox",
+    delete_source: bool = True,
+) -> str:
+    """Move an email from one mailbox into a DIFFERENT mailbox (cross-mailbox).
+
+    Microsoft Graph's /move action only works within a single mailbox's folder
+    tree. To move between two separate mailboxes (e.g. info@ -> thomas@) the
+    original message is copied via its full MIME content (all headers, sender,
+    received time preserved) into dest_mailbox/dest_folder, and then deleted
+    from source_mailbox (true move). Set delete_source=False to copy instead.
+
+    Args:
+        message_id: Graph message ID in the SOURCE mailbox
+        source_mailbox: Mailbox the message currently lives in (e.g. "info@realvirtual.io")
+        dest_mailbox: Mailbox to move it into (e.g. "thomas@realvirtual.io")
+        dest_folder: Target folder in dest_mailbox (default "Inbox"; created under Inbox if missing)
+        delete_source: True = true move (delete from source after copy); False = copy only
+
+    Returns:
+        SUCCESS with the new message ID in the destination, or ERROR
+    """
+    try:
+        if not source_mailbox or not dest_mailbox:
+            return "ERROR: source_mailbox and dest_mailbox are both required"
+
+        token = get_access_token()
+        if not token:
+            return "ERROR: Not authenticated. Use graph_authenticate first."
+        auth = {"Authorization": f"Bearer {token}"}
+
+        # 1. Resolve destination folder ID in the destination mailbox
+        dest_folder_id = _get_folder_id(dest_folder, dest_mailbox)
+        if not dest_folder_id:
+            dest_folder_id = _create_folder(dest_folder, dest_mailbox)
+        if not dest_folder_id:
+            return f"ERROR: Folder '{dest_folder}' not found/creatable in {dest_mailbox}"
+
+        # 2. Fetch the full MIME of the source message (raw bytes, not JSON)
+        mime_url = f"{GRAPH_BASE_URL}/users/{source_mailbox}/messages/{message_id}/$value"
+        mime_resp = requests.get(mime_url, headers=auth, timeout=60)
+        if mime_resp.status_code >= 400:
+            return f"ERROR: Could not read source MIME ({mime_resp.status_code}): {mime_resp.text[:200]}"
+        mime_bytes = mime_resp.content
+
+        # 3. Create the message in the destination folder from MIME (Content-Type: text/plain, base64 body)
+        import base64
+        b64_mime = base64.b64encode(mime_bytes).decode("ascii")
+        post_url = f"{GRAPH_BASE_URL}/users/{dest_mailbox}/mailFolders/{dest_folder_id}/messages"
+        post_headers = {**auth, "Content-Type": "text/plain"}
+        create_resp = requests.post(post_url, headers=post_headers, data=b64_mime, timeout=60)
+        if create_resp.status_code >= 400:
+            return f"ERROR: Could not create message in {dest_mailbox} ({create_resp.status_code}): {create_resp.text[:200]}"
+        new_id = create_resp.json().get("id")
+        if not new_id:
+            return "ERROR: Destination create returned no message ID"
+
+        # 4. Delete from source (true move). Goes to source Deleted Items (recoverable).
+        if delete_source:
+            del_url = f"{GRAPH_BASE_URL}/users/{source_mailbox}/messages/{message_id}"
+            del_resp = requests.delete(del_url, headers=auth, timeout=30)
+            if del_resp.status_code >= 400:
+                return (f"WARNING: Copied to {dest_mailbox}/{dest_folder} (id {new_id}) but could "
+                        f"not delete source ({del_resp.status_code}). Remove source manually.")
+
+        action = "moved" if delete_source else "copied"
+        mcp_log(f"[MsGraph] Cross-mailbox {action}: {source_mailbox} -> {dest_mailbox}/{dest_folder}")
+        return f"SUCCESS: Email {action} to {dest_mailbox}/{dest_folder} (new id: {new_id})"
+
+    except Exception as e:
+        mcp_log(f"[MsGraph] Cross-mailbox move error: {e}")
+        return f"ERROR: {str(e)}"
+
+
+@mcp.tool()
+@require_auth
 def graph_flag_email(message_id: str, flag_type: str = "followup", mailbox: str = None) -> str:
     """Flag or unflag an email via Microsoft Graph API.
 

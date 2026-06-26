@@ -195,6 +195,8 @@ For a complete search of all emails on the Exchange server, use Microsoft Graph:
 - `graph_get_attachments(message_id)` - **List attachments of an email**
 - `graph_download_attachment(message_id, attachment_id, save_path)` - **Download attachment**
 - `graph_list_mailboxes()` - List available mailboxes
+- `graph_move_email(message_id, folder, mailbox=None)` - Move email to a folder **within the same mailbox** (ToDelete, ToPay, Done, ...)
+- `graph_move_email_cross_mailbox(message_id, source_mailbox, dest_mailbox, dest_folder="Inbox", delete_source=True)` - **Move an email into a DIFFERENT mailbox** (e.g. info@ -> thomas@). Graph's `/move` cannot cross mailbox boundaries, so this copies the full MIME (headers/sender/received preserved) into `dest_mailbox/dest_folder` and deletes it from the source (true move). `delete_source=False` = copy only. Returns the **new message ID** in the destination. Used by the Ops `/rv-triage` skill to consolidate answerable mail into thomas@.
 
 **IMPORTANT - Search syntax:**
 ```python
@@ -610,6 +612,7 @@ gcal_create_meeting(
 | Reply draft | `gmail_create_reply_draft` | `outlook_create_reply_draft` | `graph_create_reply_draft` |
 | Star/flag | `gmail_star_email` | `outlook_flag_email` | `graph_flag_email` |
 | Labels/folders | `gmail_add_label` | `outlook_move_email` | `graph_move_email` |
+| Cross-mailbox move | — | — | `graph_move_email_cross_mailbox` |
 | Attachments | `gmail_get_attachments` | `outlook_get_email_attachments` | `graph_get_attachments` |
 | Today's events | `gcal_get_today_events` | `outlook_get_today_events` | `graph_get_today_events` |
 | Create event | `gcal_create_event` | `outlook_create_appointment` | `graph_create_calendar_event` |
