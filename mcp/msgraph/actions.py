@@ -209,10 +209,12 @@ def graph_move_email_cross_mailbox(
             return f"ERROR: Could not read source MIME ({mime_resp.status_code}): {mime_resp.text[:200]}"
         mime_bytes = mime_resp.content
 
-        # 3. Create the message in the destination folder from MIME (Content-Type: text/plain, base64 body)
+        # 3. Create the message from MIME. WICHTIG: Create-from-MIME geht NUR am Mailbox-Root
+        #    /messages, NICHT auf /mailFolders/{id}/messages (das liefert 400
+        #    UnableToDeserializePostBody). Die Nachricht landet im Root; verschoben wird in 3b.
         import base64
         b64_mime = base64.b64encode(mime_bytes).decode("ascii")
-        post_url = f"{GRAPH_BASE_URL}/users/{dest_mailbox}/mailFolders/{dest_folder_id}/messages"
+        post_url = f"{GRAPH_BASE_URL}/users/{dest_mailbox}/messages"
         post_headers = {**auth, "Content-Type": "text/plain"}
         create_resp = requests.post(post_url, headers=post_headers, data=b64_mime, timeout=60)
         if create_resp.status_code >= 400:
@@ -220,6 +222,16 @@ def graph_move_email_cross_mailbox(
         new_id = create_resp.json().get("id")
         if not new_id:
             return "ERROR: Destination create returned no message ID"
+
+        # 3b. Frisch erstellte Nachricht in den Zielordner verschieben (Same-Mailbox /move).
+        mv_resp = requests.post(
+            f"{GRAPH_BASE_URL}/users/{dest_mailbox}/messages/{new_id}/move",
+            headers={**auth, "Content-Type": "application/json"},
+            json={"destinationId": dest_folder_id}, timeout=30)
+        if mv_resp.status_code >= 400:
+            return (f"WARNING: In {dest_mailbox}-Root erstellt (id {new_id}), aber Move nach "
+                    f"'{dest_folder}' fehlgeschlagen ({mv_resp.status_code}: {mv_resp.text[:150]}). Manuell verschieben.")
+        new_id = mv_resp.json().get("id", new_id)
 
         # 4. Delete from source (true move). Goes to source Deleted Items (recoverable).
         if delete_source:
