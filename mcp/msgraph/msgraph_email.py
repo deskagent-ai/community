@@ -603,7 +603,7 @@ def graph_get_folder_emails(folder_name: str, limit: int = 50, mailbox: str = No
 
         params = {
             "$top": min(limit, 250),
-            "$select": "id,subject,from,receivedDateTime,isRead,hasAttachments,conversationId,flag,webLink",
+            "$select": "id,subject,from,receivedDateTime,isRead,hasAttachments,conversationId,flag,webLink,categories",
             # PidTagLastVerbExecuted (0x1081): liefert den Outlook-"Beantwortet"-Marker mit,
             # damit Triage Regel 1 ("schon beantwortet?") ohne teure Sent-Items-Suche auskommt.
             "$expand": "singleValueExtendedProperties($filter=id eq 'Integer 0x1081')",
@@ -657,6 +657,7 @@ def graph_get_folder_emails(folder_name: str, limit: int = 50, mailbox: str = No
                 "has_attachments": msg.get("hasAttachments", False),
                 "flag_status": flag_status,  # "notFlagged", "flagged", or "complete"
                 "replied": replied,  # True = schon beantwortet (Outlook lastVerb 102/103), spart Sent-Items-Suche
+                "categories": msg.get("categories", []),  # Outlook-Kategorien (z.B. Geprueft/ToReply) -> Triage-Skip inkrementell
             })
 
         return json.dumps({
