@@ -757,40 +757,49 @@ def userecho_create_ticket_reply(ticket_id: int, text: str, is_official: bool = 
 
 @mcp.tool()
 def userecho_create_ticket_reply_draft(ticket_id: int, text: str) -> str:
-    """Erstellt einen Antwort-Entwurf für ein Ticket (wird NICHT gesendet, nur angezeigt).
+    """Legt einen echten Antwort-ENTWURF als PRIVATEN (nur fürs Team sichtbaren)
+    Kommentar am Ticket an. Der Kunde sieht ihn NICHT. Zum Rausschicken den Entwurf
+    in UserEcho öffentlich machen bzw. userecho_create_ticket_reply() nutzen.
 
-    Zeigt den Entwurf zur Überprüfung an. Nutze userecho_create_ticket_reply() zum tatsächlichen Senden.
+    Selbstschutz: Nach dem Anlegen wird geprüft, dass der Kommentar wirklich privat
+    ist (is_private == True). Ist er das nicht (oder unbestätigt), wird er SOFORT
+    wieder gelöscht und ein Fehler gemeldet — so kann nie versehentlich etwas
+    öffentlich beim Kunden landen.
 
     Args:
         ticket_id: Die Ticket/Topic-ID
-        text: Der Antwort-Text
+        text: Der Antwort-Text (Entwurf)
 
     Returns:
-        Der formatierte Entwurf zur Überprüfung
+        Bestätigung mit Kommentar-ID, oder Fehler (dann wurde nichts hinterlassen)
     """
-    # Ticket-Details holen für Kontext
-    ticket_result = api_request(f"topics/{ticket_id}")
-    ticket = ticket_result.get("data", {})
-    title = ticket.get("header", f"Ticket #{ticket_id}")
-    author = ticket.get("author", {}).get("name", "Unbekannt")
+    result = api_request(
+        f"topics/{ticket_id}/comments",
+        method="POST",
+        data={"text": text, "is_private": True, "is_official": False},
+    )
+    if "error" in result:
+        return f"Fehler beim Anlegen des Entwurfs: {result['error']}"
 
-    lines = [
-        "📝 **ENTWURF - Nicht gesendet!**",
-        "",
-        f"**Ticket:** #{ticket_id} - {title}",
-        f"**An:** {author}",
-        "",
-        "---",
-        "## Antwort-Entwurf:",
-        "",
-        text,
-        "",
-        "---",
-        "",
-        f"⚠️ Zum Senden nutze: `userecho_create_ticket_reply({ticket_id}, '<text>')`"
-    ]
+    comment = result.get("data", {})
+    comment_id = comment.get("id")
+    is_private = comment.get("is_private")
 
-    return "\n".join(lines)
+    # Selbstschutz: nur behalten, wenn die API die Privatheit BESTÄTIGT.
+    if is_private is not True:
+        if comment_id:
+            api_request(f"topics/{ticket_id}/comments/{comment_id}", method="DELETE")
+        return (
+            "FEHLER: UserEcho hat den Kommentar nicht als privat bestätigt "
+            f"(is_private={is_private}) -> wieder gelöscht, KEIN Entwurf hinterlassen. "
+            "Bitte nicht über dieses Tool antworten."
+        )
+
+    return (
+        f"✅ Privater Entwurf (nur Team sichtbar) als Kommentar #{comment_id} auf "
+        f"Ticket #{ticket_id} angelegt. Der Kunde sieht ihn NICHT. Zum Senden in "
+        f"UserEcho öffentlich machen bzw. userecho_create_ticket_reply({ticket_id}, ...)."
+    )
 
 
 # =============================================================================
