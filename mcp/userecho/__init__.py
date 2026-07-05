@@ -741,8 +741,9 @@ def userecho_create_ticket_reply(ticket_id: int, text: str, is_official: bool = 
         Bestätigung der erstellten Antwort
     """
     data = {
-        "text": text,
-        "is_official": is_official
+        "comment": text,            # API-Feld heisst "comment" (nicht "text")
+        "is_answer": is_official,    # offizielle Antwort
+        "privacy_mode": 1,          # 1 = oeffentlich (echte Antwort an den Kunden)
     }
 
     result = api_request(f"topics/{ticket_id}/comments", method="POST", data=data)
@@ -761,10 +762,10 @@ def userecho_create_ticket_reply_draft(ticket_id: int, text: str) -> str:
     Kommentar am Ticket an. Der Kunde sieht ihn NICHT. Zum Rausschicken den Entwurf
     in UserEcho öffentlich machen bzw. userecho_create_ticket_reply() nutzen.
 
-    Selbstschutz: Nach dem Anlegen wird geprüft, dass der Kommentar wirklich privat
-    ist (is_private == True). Ist er das nicht (oder unbestätigt), wird er SOFORT
-    wieder gelöscht und ein Fehler gemeldet — so kann nie versehentlich etwas
-    öffentlich beim Kunden landen.
+    Verwendet privacy_mode=3 (nur Support-Agents). Selbstschutz: nach dem Anlegen
+    wird geprüft, dass der Kommentar wirklich staff-only ist (privacy_mode == 3).
+    Ist er das nicht (oder unbestätigt), wird er SOFORT wieder gelöscht und ein
+    Fehler gemeldet — so kann nie versehentlich etwas öffentlich beim Kunden landen.
 
     Args:
         ticket_id: Die Ticket/Topic-ID
@@ -776,23 +777,24 @@ def userecho_create_ticket_reply_draft(ticket_id: int, text: str) -> str:
     result = api_request(
         f"topics/{ticket_id}/comments",
         method="POST",
-        data={"text": text, "is_private": True, "is_official": False},
+        data={"comment": text, "privacy_mode": 3, "is_answer": False},  # 3 = nur Support-Agents (staff-only)
     )
     if "error" in result:
         return f"Fehler beim Anlegen des Entwurfs: {result['error']}"
 
     comment = result.get("data", {})
     comment_id = comment.get("id")
-    is_private = comment.get("is_private")
+    # staff-only bestätigt, wenn privacy_mode == 3 (nur Agents) ODER is_private True
+    staff_only = comment.get("privacy_mode") == 3 or comment.get("is_private") is True
 
-    # Selbstschutz: nur behalten, wenn die API die Privatheit BESTÄTIGT.
-    if is_private is not True:
+    # Selbstschutz: nur behalten, wenn wirklich staff-only bestätigt.
+    if not staff_only:
         if comment_id:
             api_request(f"topics/{ticket_id}/comments/{comment_id}", method="DELETE")
         return (
-            "FEHLER: UserEcho hat den Kommentar nicht als privat bestätigt "
-            f"(is_private={is_private}) -> wieder gelöscht, KEIN Entwurf hinterlassen. "
-            "Bitte nicht über dieses Tool antworten."
+            "FEHLER: UserEcho hat den Kommentar nicht als staff-only bestätigt "
+            f"(privacy_mode={comment.get('privacy_mode')}) -> wieder gelöscht, KEIN "
+            "Entwurf hinterlassen. Bitte nicht über dieses Tool antworten."
         )
 
     return (
