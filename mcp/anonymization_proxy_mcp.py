@@ -1197,6 +1197,13 @@ async def proxy_reload_tools(ctx: Context) -> str:
     _registered_tool_names.update(proxy_tools)
     _lazy_modules.clear()
 
+    # Drop cached module objects so changed MCP/plugin code is re-executed.
+    # Without this, load_mcp_package() returns the stale module from
+    # _loaded_modules and edits to plugin tools are never picked up.
+    for name in list(_loaded_modules.keys()):
+        _loaded_modules.pop(name, None)
+        sys.modules.pop(name, None)
+
     # Re-discover and register tools
     discover_and_register_all_tools()
 
@@ -1277,8 +1284,19 @@ def _load_from_cache(mcp_filter: str = None) -> int:
         # Validate mtimes - check if any MCP file was modified since cache was built
         cached_mtimes = cache_data.get("mcp_mtimes", {})
         if cached_mtimes:
+            # Plugin MCPs are cached as "plugin_<name>_mcp" but live under
+            # plugins/<name>/mcp/__init__.py - resolve both locations so
+            # edits to plugin tools also invalidate the cache.
+            plugins_root = MCP_DIR.parent.parent / "plugins"
+            ws_env = os.environ.get("DESKAGENT_WORKSPACE_DIR")
+            if not plugins_root.exists() and ws_env:
+                plugins_root = Path(ws_env) / "plugins"
             for mcp_name, cached_mtime in cached_mtimes.items():
-                init_file = MCP_DIR / mcp_name / "__init__.py"
+                if mcp_name.startswith("plugin_") and mcp_name.endswith("_mcp"):
+                    plugin_name = mcp_name[len("plugin_"):-len("_mcp")]
+                    init_file = plugins_root / plugin_name / "mcp" / "__init__.py"
+                else:
+                    init_file = MCP_DIR / mcp_name / "__init__.py"
                 if init_file.exists():
                     try:
                         current_mtime = init_file.stat().st_mtime
