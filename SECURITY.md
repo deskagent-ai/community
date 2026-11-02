@@ -19,7 +19,7 @@ We strongly recommend always running the latest released version.
 If you believe you have found a security vulnerability in DeskAgent, please
 report it privately by emailing:
 
-**security@realvirtual.io** (or, if that is not yet set up: **info@realvirtual.io**)
+**info@realvirtual.io**
 
 Please include in your report:
 
