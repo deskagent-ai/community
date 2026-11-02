@@ -654,7 +654,7 @@ class TestRoundReadyRoute:
         from assistant.app import create_app
 
         app = create_app()
-        return TestClient(app)
+        return TestClient(app, base_url="http://localhost:8765")  # Host must pass LocalRequestGuard
 
     def test_round_ready_unknown_task_returns_404(self, test_client):
         """T14: POST /round-ready with unknown task_id -> 404."""

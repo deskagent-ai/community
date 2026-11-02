@@ -380,6 +380,11 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Host + Origin guard: blocks DNS rebinding and cross-site requests from
+    # web pages the user visits (see security.py). Added last = runs first.
+    from .security import LocalRequestGuard
+    app.add_middleware(LocalRequestGuard)
+
     # Include routers
     from .routes.tasks import router as tasks_router
     from .routes.system import router as system_router

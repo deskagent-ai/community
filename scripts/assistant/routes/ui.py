@@ -26,6 +26,7 @@ from paths import PROJECT_DIR, get_config_dir
 # Import UI builder from services
 from ..services.ui_builder import build_web_ui, build_preprompt_ui
 from ..services.mcp_metadata import get_tool_metadata
+from ..security import safe_join
 
 
 def get_templates_dir() -> Path:
@@ -474,8 +475,8 @@ async def serve_icon(path: str = "icon.ico"):
 @router.get("/static/icons/{icon_name:path}")
 async def serve_static_icon(icon_name: str):
     """Serve static icons."""
-    icon_path = get_templates_dir() / "icons" / icon_name
-    if icon_path.exists() and icon_path.is_file():
+    icon_path = safe_join(get_templates_dir() / "icons", icon_name)
+    if icon_path is not None and icon_path.is_file():
         ext = icon_path.suffix.lower()
         content_types = {
             ".png": "image/png",
@@ -512,8 +513,8 @@ async def serve_unified_styles():
 @router.get("/static/js/{js_name:path}")
 async def serve_javascript(js_name: str):
     """Serve JavaScript modules."""
-    js_path = get_templates_dir() / "js" / js_name
-    if js_path.exists() and js_path.is_file():
+    js_path = safe_join(get_templates_dir() / "js", js_name)
+    if js_path is not None and js_path.is_file():
         return FileResponse(
             path=js_path,
             media_type="application/javascript; charset=utf-8",
@@ -525,8 +526,8 @@ async def serve_javascript(js_name: str):
 @router.get("/static/css/{css_name:path}")
 async def serve_css(css_name: str):
     """Serve CSS stylesheets."""
-    css_path = get_templates_dir() / "css" / css_name
-    if css_path.exists() and css_path.is_file():
+    css_path = safe_join(get_templates_dir() / "css", css_name)
+    if css_path is not None and css_path.is_file():
         return FileResponse(
             path=css_path,
             media_type="text/css; charset=utf-8",

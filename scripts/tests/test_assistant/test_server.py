@@ -284,7 +284,7 @@ class TestFastAPIStartup:
         from assistant.app import create_app
 
         app = create_app()
-        return TestClient(app)
+        return TestClient(app, base_url="http://localhost:8765")  # Host must pass LocalRequestGuard
 
     def test_app_creates_successfully(self):
         """Test that FastAPI app can be created without errors."""

@@ -38,7 +38,7 @@ class TestMcpApiRoutes:
         from assistant.app import create_app
 
         app = create_app()
-        return TestClient(app)
+        return TestClient(app, base_url="http://localhost:8765")  # Host must pass LocalRequestGuard
 
     # =========================================================================
     # GET /api/mcp/config
@@ -435,7 +435,7 @@ class TestMcpApiAnonymizationFlow:
         from assistant.app import create_app
 
         app = create_app()
-        return TestClient(app)
+        return TestClient(app, base_url="http://localhost:8765")  # Host must pass LocalRequestGuard
 
     def test_full_anonymize_deanonymize_flow(self, test_client):
         """Test complete anonymize -> deanonymize flow."""
